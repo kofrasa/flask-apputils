@@ -222,19 +222,19 @@ class Base(object):
     
         Ex. User.query('name','email')
     
-        Mapped attributes are lazy loaded by default. To eager load a mapped
-        attribute on the given class, just provide its name as part of the fields.
-    
-        Ex: User.query('contacts')
-    
-        A smart guess is taken to use either, joinedload or subqueryload.
-        For more fine grain control, especially in the case of odd names, use an
-        explicit mapper option construct.
-    
+        Related attributes and user-defined column properties are lazy loaded by default.
+        To eager load them, just provide their names in the query.
+        
+        The configured loader for the attribute in the mapping will be used.
+        This query loads the column_property `address_count` and the related property `addresses`
+        
+        Ex: User.query('address_count', 'addresses')
+        
+        Alternatively, you can add the loading option directly (applies to related properties)
         Ex: User.query('id',subqueryload('addresses'))
     
-        All simple attributes of the `class` are returned if none is specfied.
         Primary Key attributes of the `class` are always returned.
+        All column attributes of the `class` are returned if none is specfied.        
     
         """
         from sqlalchemy.orm import defer, lazyload, ColumnProperty, RelationshipProperty
