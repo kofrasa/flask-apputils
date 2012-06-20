@@ -5,22 +5,8 @@ from math import ceil
 from sqlalchemy.orm import scoped_session, create_session, Query
 from sqlalchemy.engine import create_engine
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import *
 from flask import jsonify, abort
-
-__all__ = [
-    'Base',
-    'Pagination',
-    'commit',
-    'rollback',
-    'execute',
-    'add',
-    'remove',
-    'query',    
-    'create_all',
-    'drop_all',
-    'init_engine',
-    'init_app'
-]
 
 
 class BaseQuery(Query):
@@ -189,12 +175,12 @@ class Base(object):
         return self.put()        
     
     def save(self):
-        db.add(self)
+        _db.add(self)
         return self
     
     def put(self):        
         self.save()
-        db.commit()
+        _db.commit()
         return self
     
     def to_json(self):
@@ -202,7 +188,7 @@ class Base(object):
     
     @classmethod
     def get(cls,ident):
-        return db.query(cls).get(ident)
+        return _db.query(cls).get(ident)
     
     @classmethod
     def get_or_abort(cls, ident, code=404):
@@ -234,7 +220,7 @@ class Base(object):
         Ex: User.query('id',subqueryload('addresses'))
     
         Primary Key attributes of the `class` are always returned.
-        All column attributes of the `class` are returned if none is specfied.        
+        All column attributes of the `class` are returned if none is specfied.     
     
         """
         from sqlalchemy.orm import defer, lazyload, ColumnProperty, RelationshipProperty
@@ -303,7 +289,7 @@ class Base(object):
                 if not isinstance(value, (list,tuple,set)):
                     value = [value]
                                 
-                # generate appropriate criteria expression
+                # generate appropriate criteria expression for datetime filters
                 import datetime as dt
                 if c.type.python_type == dt.datetime:
                     lower = min(value)
@@ -318,45 +304,44 @@ class Base(object):
                     value = getattr(cls,attr).in_(value)                
                 criteria.append(value)
         
-        return db.query(cls).options(*options).filter(*criteria)
+        return _db.query(cls).options(*options).filter(*criteria)
 
 
-engine = None
-db = scoped_session(lambda: create_session(bind=engine, autoflush=True, autocommit=False))
-db.query_cls = BaseQuery
+_engine = None
+_db = scoped_session(lambda: create_session(bind=_engine, autoflush=True, autocommit=False))
+_db.query_cls = BaseQuery
 Base = declarative_base(cls=Base)
 
 
 def init_engine(uri, **kwargs):
-    global engine
-    engine = create_engine(uri, **kwargs)
-    return engine
+    global _engine
+    _engine = create_engine(uri, **kwargs)
 
 def create_all():
-    Base.metadata.create_all(engine)
+    Base.metadata.create_all(_engine)
 
 def drop_all():
-    Base.metadata.drop_all(engine)
+    Base.metadata.drop_all(_engine)
 
 def commit():
-    return db.commit()
+    return _db.commit()
 
 def rollback():
-    return db.rollback()
+    return _db.rollback()
 
 def execute(obj,*multiparams,**params):
-    conn = engine.connect()
+    conn = _engine.connect()
     result = conn.execute(obj,*multiparams,**params)
     return result
 
 def add(model):
-    db.add(model)
+    _db.add(model)
 
 def remove():
-    db.remove()
+    _db.remove()
 
 def query(*args, **kwargs):
-	return db.query(*args, **kwargs)
+	return _db.query(*args, **kwargs)
 
 def init_app(app):
     """Initialize application database"""
