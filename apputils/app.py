@@ -37,7 +37,7 @@ def context_processor():
 # convenience methods for accessing app.logger
 def _log(level, msg, *args, **kwargs):
     from flask.globals import current_app as app
-    result = {
+    log = {
         'debug': app.logger.debug,
         'error': app.logger.error,
         'info': app.logger.info,
@@ -46,17 +46,17 @@ def _log(level, msg, *args, **kwargs):
 
 
 def debug(msg, *args, **kwargs):
-    _log(__name__, msg, *args, **kwargs)
+    _log('debug', msg, *args, **kwargs)
     
 
 def warn(msg, *args, **kwargs):
-    _log(__name__, msg, *args, **kwargs)
+    _log('warn', msg, *args, **kwargs)
 
     
-def info(message):
-    _log(__name__, msg, *args, **kwargs)
+def error(msg, *args, **kwargs):
+    _log('error', msg, *args, **kwargs)
     
 
-def error(message):
-    _log(__name__, msg, *args, **kwargs)
+def info(msg, *args, **kwargs):
+    _log('info', msg, *args, **kwargs)
     
