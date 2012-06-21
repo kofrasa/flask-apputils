@@ -7,8 +7,7 @@ from flaskext.htmlbuilder import html
 __all__ = [
     'static',
     'render_template',
-    'get_message',
-    'get_image',
+    'get_flash',
     'image_tag',
     'js_include_tag',
     'css_link_tag',
