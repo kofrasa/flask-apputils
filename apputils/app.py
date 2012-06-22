@@ -32,5 +32,4 @@ def context_processor():
         'image_tag': image_tag,
         'html': html,
         'render': render_template,
-    }
-    
+    }   
