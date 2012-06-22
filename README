@@ -3,17 +3,16 @@ Utilities extracted from my Flask applications.
 The files are mostly independent from each other but may have dependencies on some
 Flask extensions. Assume all files depend on Flask.
 
-Below is a mapping of files and their dependencies.
+Below are included files and their dependencies.
 
-# this is a small but powerful interface to using SQLAlchemy without the Flask extension.
-db.py           >  SQLAlchemy
-app.py          >  helpers.py, Flask-Silk
-decorators.py   >  helpers.py, Flask-Cache
-filters.py      >  ''
-interfaces.py   >  itsdangerous
-mimes.py        >  ''
-validators.py   >  ''
-helpers.py      >  Flask-HTMLBuilder, Flask-Mako
+
+app.py (helpers.py, Flask-Silk, Flask-HTMLBuilder)
+decorators.py (helpers.py, Flask-Cache)
+filters.py
+interfaces.py (itsdangerous)
+mimes.py
+validators.py
+helpers.py (Flask-HTMLBuilder, Flask-Mako)
 
 
 Go through the sources and pick what you like for your app.
