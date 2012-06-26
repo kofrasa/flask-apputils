@@ -36,23 +36,37 @@ def get_flash(category=None):
         return '\n'.join(get_flashed_messages())
     messages = get_flashed_messages(with_categories=True)
     return '\n'.join([m for k,m in messages if k == category])
+
     
 def link_to(text, endpoint, **kwargs):
-    return unicode(html.a(href=url_for(endpoint), **kwargs)(text))
+    try:
+        url = url_for(endpoint)
+        endpoint = url
+    except:
+        pass
+    return unicode(html.a(href=endpoint, **kwargs)(text))
+    
     
 def css_link_tag(filename, **kw):
-    ext = '.css' if filename[-5:] != '.less' else ''
-    rel = "stylesheet" if ext else "stylesheet/less"
-    path = static('css/' + filename + ext)
     
+    try:
+        path = static('css/' +  filename + '.css')
+        rel = 'stylesheet'
+    except:
+        path = static('css/' +  filename + '.less')
+        rel = 'stylesheet/less'
+
+        
     for k in ('rel','type','href'):
         kw.pop(k,None)
         
     return unicode(html.link(rel=rel, type="text/css", href=path, **kw))
+
     
 def js_include_tag(filename):
     return unicode(html.script(type="text/javascript",
                                src=static('js/'+filename+'.js'))())
+
     
 def image_tag(filename, alt=''):
     return unicode(html.img(alt=alt, src=static('img/' + filename)))

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-
 # convenience methods for accessing app.logger
 
 from flask.globals import current_app as app

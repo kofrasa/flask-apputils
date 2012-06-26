@@ -76,8 +76,8 @@ class MethodRewriteMiddleware(object):
             method = args.get(self.name).upper()
             req_method = environ['REQUEST_METHOD']
             if req_method == 'POST' and method in ['POST','PUT','DELETE']:
-                    method = method.encode('ascii', 'replace')
-                    environ['REQUEST_METHOD'] = method
+                method = method.encode('ascii', 'replace')
+                environ['REQUEST_METHOD'] = method
 
         return self.app(environ, start_response)
         
