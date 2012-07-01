@@ -53,7 +53,7 @@ class ModelMixin(object):
     #attributes protected from mass assignment
     attr_protected = tuple()
     
-    #attributes accessible through mass assignments
+    #attributes accessible through mass assignments and also returned by to_json
     attr_accessible = tuple()
     
     #user-defined column_property objects to eager load when fetching mapped object.
@@ -66,7 +66,7 @@ class ModelMixin(object):
         for attr in params:
             if attr in self.__class__.attr_protected: continue
             if attr in self.__class__.attr_accessible or not self.__class__.attr_accessible:
-                assert hasattr(self, attr), 'Unknown attribute: %s' % attr
+                assert hasattr(self, attr), 'Unknown attribute: %r' % attr
                 setattr(self, attr, params[attr])
         return self
     
@@ -78,13 +78,17 @@ class ModelMixin(object):
         db.session.add(self)
         return self
     
-    def put(self):        
+    def put(self):
         self.save()
         db.session.commit()
         return self
     
     def to_json(self):
-        return jsonify({c.name:getattr(self, c.name) for c in self.__table__.columns})
+        attrs = self.__class__.attr_accessible
+        if not attrs:
+            attrs = [c.name for c in self.__class__.__table__.columns]
+        params = {name:getattr(self, name) for name in attrs}
+        return jsonify(**params)
     
     @classmethod
     def get(cls,ident):
@@ -100,13 +104,13 @@ class ModelMixin(object):
         return value
 
     @classmethod
-    def query(cls,*fields,**filters):
+    def q(cls,*fields,**filters):
         """Provides a simple interface for constructing a query dynamically
         for a target mapper `class`.
     
         A subset of attributes to load can be given to avoid generating a large result.
     
-        Ex. User.query('name','email')
+        Ex. User.q('name','email')
     
         Related attributes and user-defined column properties are lazy loaded by default.
         To eager load them, just provide their names in the query.
@@ -114,10 +118,10 @@ class ModelMixin(object):
         The configured loader for the attribute in the mapping will be used.
         This query loads the column_property `address_count` and the related property `addresses`
         
-        Ex: User.query('address_count', 'addresses')
+        Ex: User.q('address_count', 'addresses')
         
         Alternatively, you can add the loading option directly (applies to related properties)
-        Ex: User.query('id',subqueryload('addresses'))
+        Ex: User.q('id',subqueryload('addresses'))
     
         Primary Key attributes of the `class` are always returned.
         All column attributes of the `class` are returned if none is specfied.     
@@ -204,4 +208,4 @@ class ModelMixin(object):
                     value = getattr(cls,attr).in_(value)                
                 criteria.append(value)
         
-        return db.query(cls).options(*options).filter(*criteria) 
+        return db.session.query(cls).options(*options).filter(*criteria) 
