@@ -3,7 +3,7 @@
 # A collection of mimetypes to help with parsing and correctly handling/sending content
 # based on their extensions.
 
-__all__ = ['mime_types', 'file_ext']
+__all__ = ['mime_types', 'file_exts']
 
 _mimetypes = {
 	'hqx':		['application/mac-binhex40'],
