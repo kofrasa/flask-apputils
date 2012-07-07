@@ -46,11 +46,12 @@ def ssl_required(f):
 def as_json(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
+        from flask import jsonify
         from flask.wrappers import Response
         res = f(*args, **kwargs)
         if isinstance(res, Response):
             return res        
-        return json.dumps(res)
+        return jsonify(res)
     return wrapper
 
 

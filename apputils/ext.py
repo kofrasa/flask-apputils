@@ -1,8 +1,32 @@
 #!/usr/bin/env python
 
+import json
 import datetime as dt
 from flask_sqlalchemy import SQLAlchemy
-from flask import jsonify, abort
+from flask import abort
+
+
+def context_processor():
+    """application context processor"""
+    from flaskext.silk import send_silkicon
+    from flaskext.htmlbuilder import html
+    from .helpers import (
+        render_template, load_template, static, get_flash, link_to, js_include_tag,
+        css_link_tag, image_tag,
+    )
+    # rails style utility functions and more...
+    return {
+        'static': static,
+        'silkicon': send_silkicon,
+        'get_flash': get_flash,
+        'link_to': link_to,
+        'css_link_tag': css_link_tag,
+        'js_include_tag': js_include_tag,
+        'image_tag': image_tag,
+        'html': html,
+        'render': render_template,
+        'load_template': load_template
+    } 
 
 
 class _SQLAlchemyExt(SQLAlchemy):
@@ -13,9 +37,9 @@ class _SQLAlchemyExt(SQLAlchemy):
     def rollback(self):
         return self.session.rollback()
     
-    def execute(self, obj,*multiparams,**params):
+    def execute(self, obj, *multiparams, **params):
         conn = self.engine.connect()
-        result = conn.execute(obj,*multiparams,**params)
+        result = conn.execute(obj, *multiparams, **params)
         return result
     
     def add(self, model):
@@ -29,19 +53,19 @@ class _SQLAlchemyExt(SQLAlchemy):
 
 db = _SQLAlchemyExt()
 
-class ModelMixin(object):
+class ActiveRecordMixin(object):
     """Provives an extended query function with some Rails style candy,
     for db.Model classes defined for SQLAlchemy.
     
     Example:
     
-    class User(ModelMixin, db.Model):
+    class User(db.Model, ActiveRecordMixin):
         id = db.Column(db.Integer, primary_key=True)
         username = db.Column(db.String(80), unique=True)
         email = db.Column(db.String(120), unique=True)
         addresses = db.relationship('Address', backref='user',lazy='joined')
         
-    class Address(ModelMixin, db.Model):
+    class Address(db.Model, ActiveRecordMixin):
         id = db.Column(db.Integer, primary_key=True)
         city = db.Column(db.String(50))
         state = db.Column(db.String(50))
@@ -57,17 +81,44 @@ class ModelMixin(object):
     attr_accessible = tuple()
     
     #user-defined column_property objects to eager load when fetching mapped object.
-    default_properties = tuple()
+    custom_properties = tuple()
     
     def __init__(self, **params):
         self.assign_attributes(**params)
+        
+    @classmethod
+    def _pk_attributes(cls):
+        return [c.name for c in cls.__table__.primary_key]
+            
+    @classmethod
+    def _column_attributes(cls):
+        return [c.name for c in cls.__table__.columns]
+    
+    @classmethod
+    def _custom_attributes(cls):
+        attribs = []
+        s = len(cls.__name__) + 1
+        columns = cls._column_attributes()
+        for c in cls.__mapper__.iterate_properties:
+            if issubclass(c, ColumnProperty) and c.name not in columns:                
+                attribs.append(str(c)[s:])
+        return attribs
+    
+    @classmethod
+    def _related_attributes(cls):
+        attribs = []
+        s = len(cls.__name__) + 1
+        for c in cls.__mapper__.iterate_properties:
+            if issubclass(c, RelationshipProperty):                
+                attribs.append(str(c)[s:])
+        return attribs
         
     def assign_attributes(self, **params):
         for attr in params:
             if attr in self.__class__.attr_protected: continue
             if attr in self.__class__.attr_accessible or not self.__class__.attr_accessible:
-                assert hasattr(self, attr), 'Unknown attribute: %r' % attr
-                setattr(self, attr, params[attr])
+                if hasattr(self, attr):
+                    setattr(self, attr, params[attr])
         return self
     
     def update_attributes(self, **params):
@@ -83,13 +134,16 @@ class ModelMixin(object):
         db.session.commit()
         return self
     
-    def to_json(self):
-        attrs = self.__class__.attr_accessible
-        if not attrs:
-            attrs = [c.name for c in self.__class__.__table__.columns]
-        params = {name:getattr(self, name) for name in attrs}
-        return jsonify(**params)
-    
+    def to_json(self, ident=None):
+        attribs = self.__class__.attr_accessible
+        
+        if not attribs:
+            attribs = self.__class__._column_attributes()
+        
+        attribs.extend(self.__class__._custom_attributes())
+        
+        return {unicode(name):getattr(self, name) for name in attribs}
+     
     @classmethod
     def get(cls,ident):
         return db.session.query(cls).get(ident)
@@ -179,7 +233,7 @@ class ModelMixin(object):
                     options.append(lazyload(attr))                
                 # user-defined column_property are deferred unless specified in
                 # the default_properties tuple or within the query
-                elif attr not in cls.default_properties:
+                elif attr not in cls.custom_properties:
                     options.append(defer(attr))
         
         # build criteria from filters
