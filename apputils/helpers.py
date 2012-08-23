@@ -16,7 +16,6 @@ __all__ = [
     'js_include_tag',
     'css_link_tag',
     'link_to',
-    'template_selector'
 ]
 
 
@@ -89,26 +88,6 @@ def js_include_tag(filename, **kwargs):
 def image_tag(filename, **kwargs):
     return unicode(html.img(src=static('img/' + filename), **kwargs))
     
-
-def template_selector(import_name):
-    name = import_name[import_name.rfind('.')+1:]
-    def templated(template=None):
-        def decorator(f):
-            @wraps(f)
-            def wrapper(*args, **kwargs):
-                from .helpers import render_template   
-                template_name = '/'.join([name, template])
-                if template_name is None:
-                    template_name = request.endpoint.replace('.', '/')
-                ctx = f(*args, **kwargs)
-                if ctx is None:
-                    ctx = {}
-                elif not isinstance(ctx, dict):
-                    return ctx
-                return render_template(template_name, **ctx)
-            return wrapper
-        return decorator
-    return templated
     
 def format_html(template):
     def inner(**context):
