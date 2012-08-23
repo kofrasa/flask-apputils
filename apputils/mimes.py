@@ -3,7 +3,7 @@
 # A collection of mimetypes to help with parsing and correctly handling/sending content
 # based on their extensions.
 
-__all__ = ['mime_types', 'file_exts']
+__all__ = ['get_mimes', 'get_extensions']
 
 _mimetypes = {
 	'hqx':		['application/mac-binhex40'],
@@ -100,11 +100,11 @@ _mimetypes = {
 };
 
 
-def mime_types(extension=None):
+def get_mimes(extension=None):
     """Returns the mimetypes for the given extension"""   
     return _mimetypes.get(extension) if extension else None
 
-def file_exts(mimetype=None):
+def get_extensions(mimetype=None):
     """Returns possible extensions for the given mimetype"""
     exts = []
     for ext in _mimetypes:
