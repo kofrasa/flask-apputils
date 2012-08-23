@@ -1,16 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import os
-from functools import wraps
 from flask import g, url_for, get_flashed_messages
 from flask.helpers import send_file
-from flaskext.mako import render_template as render
 from flaskext.htmlbuilder import html
 
 __all__ = [
     'static',
-    'render_template',
-    'load_template'
     'get_flash',
     'image_tag',
     'js_include_tag',
@@ -21,27 +16,6 @@ __all__ = [
 
 def static(filename):
     return url_for('static', filename=filename)
-
-
-def render_template(filename, **context):
-    from flask.globals import current_app as app
-    
-    context = context or {}    
-    app.update_template_context(context)
-
-    # flask-mako already injects: g, request, and session
-    for k in ('g','request','session'):
-        context.pop(k, None)
-    filename += '.html' if '.' not in filename else ''
-    return render(filename, **context)
-
-
-def load_template(filename, **context):
-    template = render_template(filename, **context)
-    name = str(os.path.splitext(filename)[0]).replace(os.path.sep, '_')
-    return unicode(
-        html.script(id=name, type='text/html')(html.safe(template))
-    )
 
 
 def get_flash(category=None, sep='\n'):
@@ -88,11 +62,3 @@ def js_include_tag(filename, **kwargs):
 def image_tag(filename, **kwargs):
     return unicode(html.img(src=static('img/' + filename), **kwargs))
     
-    
-def format_html(template):
-    def inner(**context):
-        template_name = template
-        if template_name is None:
-            template_name = request.endpoint.replace('.', '/')
-        return render_template(template_name, **context)
-    return inner

@@ -3,6 +3,9 @@
 import json
 from functools import wraps
 
+# use your favorite template here
+from flask.templating import render_template
+
 def after_this_request(f):
     """Decorator for functions to run after request has been processed"""
     from flask import g
@@ -16,7 +19,6 @@ def templated(template=None):
     def decorator(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
-            from .helpers import render_template   
             template_name = template
             if template_name is None:
                 template_name = request.endpoint.replace('.', '/')

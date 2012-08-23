@@ -2,7 +2,6 @@
 
 import datetime as dt
 from flask_sqlalchemy import SQLAlchemy
-from flask import abort
 
 
 class _SQLAlchemyExt(SQLAlchemy):
@@ -30,44 +29,98 @@ class _SQLAlchemyExt(SQLAlchemy):
 
 db = _SQLAlchemyExt()
 
-from sqlalchemy.orm import ColumnProperty, RelationshipProperty
-from sqlalchemy.sql.expression import ClauseElement
+from sqlalchemy.orm import ColumnProperty, RelationshipProperty \
+                            , object_mapper, class_mapper
 
 
-def _get_pk(model):
-    return [c.name for c in model.__table__.primary_key]
+def _get_mapper(obj):
+    """Returns the primary mapper for the given instance or class"""
+    its_a_model = isinstance(obj, type)
+    mapper = class_mapper if its_a_model else object_mapper
+    return mapper(obj)
+
+def _primary_key_names(obj):
+    """Returns the name of the primary key of the specified model or instance
+    of a model, as a string.
+
+    If `model_or_instance` specifies multiple primary keys and ``'id'`` is one
+    of them, ``'id'`` is returned. If `model_or_instance` specifies multiple
+    primary keys and ``'id'`` is not one of them, only the name of the first
+    one in the list of primary keys is returned.
+
+    """
+    mapped = _get_mapper(obj)
+    return [key.name for key in mapped.primary_key]
 
 def _get_columns(model):
-    return [c.name for c in model.__table__.columns]
+    """Returns a dictionary-like object containing all the columns of the
+    specified `model` class.
 
-def _get_custom(model):
-    attribs = []
-    s = len(model.__name__) + 1
-    columns = _get_columns(model)
-    for c in model.__mapper__.iterate_properties:
-        if isinstance(c, ColumnProperty):
-            name = str(c)[s:]
-            if name not in columns:
-                attribs.append(name)
-    return attribs
+    """
+    return {c.key:c for c in _get_mapper(model).iterate_properties
+                if isinstance(c, ColumnProperty)}
+
 
 def _get_relations(model):
-    attribs = []
-    s = len(model.__name__) + 1
-    for c in model.__mapper__.iterate_properties:
-        if isinstance(c, RelationshipProperty):
-            attribs.append(str(c)[s:])
-    return attribs
+    return {c.key:c for c in _get_mapper(model).iterate_properties
+                if isinstance(c, RelationshipProperty)}
+
+
+# This code was adapted from :meth:`elixir.entity.Entity.to_dict` and
+# http://stackoverflow.com/q/1958219/108197.
+#
+# TODO should we have an `include` argument also?
+def _to_dict(instance, deep=None, exclude=None):
+    """Returns a dictionary representing the fields of the specified `instance`
+    of a SQLAlchemy model.
+
+    `deep` is a dictionary containing a mapping from a relation name (for a
+    relation of `instance`) to either a list or a dictionary. This is a
+    recursive structure which represents the `deep` argument when calling
+    `_to_dict` on related instances. When an empty list is encountered,
+    `_to_dict` returns a list of the string representations of the related
+    instances.
+
+    `exclude` specifies the columns which will *not* be present in the returned
+    dictionary representation of the object.
+
+    """
+    deep = deep or {}
+    exclude = exclude or ()
+    # create the dictionary mapping column name to value
+    columns = (p.key for p in object_mapper(instance).iterate_properties
+               if isinstance(p, ColumnProperty))
+    result = dict((col, getattr(instance, col)) for col in columns)
+    # Convert datetime and date objects to ISO 8601 format.
+    #
+    # TODO We can get rid of this when issue #33 is resolved.
+    for key, value in result.items():
+        if isinstance(value, datetime.date):
+            result[key] = value.isoformat()
+    # recursively call _to_dict on each of the `deep` relations
+    for relation, rdeep in deep.iteritems():
+        # exclude foreign keys of the related object for the recursive call
+        relationproperty = object_mapper(instance).get_property(relation)
+        newexclude = (key.name for key in relationproperty.remote_side)
+        # get the related value so we can see if it is None or a list
+        relatedvalue = getattr(instance, relation)
+        if relatedvalue is None:
+            result[relation] = None
+        elif isinstance(relatedvalue, list):
+            result[relation] = [_to_dict(inst, rdeep, newexclude)
+                                for inst in relatedvalue]
+        else:
+            result[relation] = _to_dict(relatedvalue, rdeep, newexclude)
+    return result
 
 
 def _select(model, *fields):
-    
+
     from sqlalchemy.orm import defer, lazyload
 
-    PK_COLUMNS = _get_pk(model)
-    COLUMNS = _get_columns(model)
-    RELATED = _get_relations(model)
-    ATTRIBUTES = _get_columns(model) + _get_relations(model) + _get_custom(model)
+    PK_COLUMNS = _primary_key_names(model)
+    COLUMNS = _get_columns(model).keys()
+    RELATIONS = _get_relations(model).keys()
 
     fields = list(set(fields)) if fields else COLUMNS
 
@@ -80,26 +133,22 @@ def _select(model, *fields):
 
     options = []
     # ensure PKs are included and defer unrequested attributes (includes related)
-    for attr in ATTRIBUTES:
+    for attr in (c.key for c in class_mapper(model).iterate_properties):
         if attr not in fields:
             if attr in PK_COLUMNS:
                 fields.append(attr)
             elif attr in COLUMNS:
                 options.append(defer(attr))
             # relationships
-            elif attr in RELATED:
+            elif attr in RELATIONS:
                 options.append(lazyload(attr))
-            # user-defined column_property are deferred by default unless
-            # specified in the custom_properties tuple or within the select
-            elif attr not in model.custom_properties:
-                options.append(defer(attr))    
     return options
 
 
 def _where(model, *criteria, **filters):
     """Builds a list of where conditions for this applying the correct operators
     for representing the values.
-    
+
     For sequence values of list, set or tuples, the SQL `IN` operator is used.
     For single values, the SQL `=` operator.
     """
@@ -108,20 +157,17 @@ def _where(model, *criteria, **filters):
     # build criteria from filters
     if filters:
         COLUMNS = _get_columns(model)
-        COLUMN_TYPES = {c.name:c for c in model.__table__.columns}
 
         for attr in filters:
-            assert attr in COLUMNS, "Invalid attribute in criteria %r" % attr
 
             value = filters[attr]
-            c = COLUMN_TYPES[attr]
+            prop = COLUMN[attr]
 
             if not isinstance(value, (list,tuple,set)):
                 value = [value]
 
             # generate appropriate criteria expression for datetime filters
-            import datetime as dt
-            if c.type.python_type == dt.datetime:
+            if prop.type.python_type == dt.datetime:
                 lower = min(value)
                 upper = max(value)
                 lower = dt.datetime(year=lower.year, month=lower.month, day=lower.day,)
@@ -131,7 +177,7 @@ def _where(model, *criteria, **filters):
             elif len(value) == 1:
                 value = getattr(model,attr) == value.pop()
             else:
-                value = getattr(model,attr).in_(value)                
+                value = getattr(model,attr).in_(value)
             conditions.append(value)
     return conditions
 
@@ -163,10 +209,6 @@ class ActiveRecordMixin(object):
     #attributes accessible through mass assignments and also returned by to_json
     attr_accessible = tuple()
 
-    #user-defined column_property objects to eager load when fetching mapped object.
-    #properties are also returned in to_json by default
-    custom_properties = tuple()
-
     def __init__(self, **params):
         self.assign_attributes(**params)
 
@@ -191,7 +233,26 @@ class ActiveRecordMixin(object):
         self.query.session.commit()
         return self
 
-    def as_json(self, include_columns=None):
+    def to_dict(self, include=None):
+        result = {}
+        for k in _get_columns(self):
+            if not include or k in include:
+                result[k] = getattr(self, k)
+                # change dates to isoformat
+                if isinstance(result[k], (dt.time, dt.date, dt.datetime)):
+                    result[k] = result[k].isoformat()
+        # handle relationships
+        for k, rel in _get_relations(self).items():
+            if not include or k in include:
+                relcolumns = _get_columns(rel.mapper.class_)
+                for c in (r.key for r in rel.remote_side):
+                    relcolumns.pop(c)
+                value = getattr(self, k)
+                if isinstance(value, list):
+                    result[k] = [val.to_dict(include=relcolumns.keys())
+                                 for val in value]
+                else:
+                    result[k] = value.to_dict(include=relcolumns.keys())
         return result
 
     @classmethod
@@ -204,16 +265,16 @@ class ActiveRecordMixin(object):
 
     @classmethod
     def first(cls):
-        return cls.query.first()        
+        return cls.query.first()
 
     @classmethod
     def select_by(cls, *fields):
         """Combines a SQL projection and selection in one step by returning a curried
         function of a where clause
         Eg. User.select_by('id','name')(name='Francis).all()
-        """        
+        """
         def whereclause(*criteria, **filters):
-            return cls.select(*fields).filter(*_where(cls, *criteria, **filters))            
+            return cls.select(*fields).filter(*_where(cls, *criteria, **filters))
         return whereclause
 
     @classmethod
@@ -224,4 +285,4 @@ class ActiveRecordMixin(object):
     @classmethod
     def where(cls, *criteria, **filters):
         conditions = _where(cls, *criteria, **filters)
-        return cls.select().filter(*conditions) 
+        return cls.select().filter(*conditions)

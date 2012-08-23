@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import datetime
+
 def number(value, tsep=',', dsep='.'):
     s = unicode(value)
     cnt = 0
