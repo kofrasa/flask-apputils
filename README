@@ -1,21 +1,28 @@
 Utilities extracted from my Flask applications.
 
 The files are mostly independent from each other but may have dependencies on some
-Flask extensions. Assume all files depend on Flask.
+Flask extensions.
 
-Below are included files and their dependencies.
+Modules
+========
+
+decorators.py   =   common decorators for apps
+filters.py      =   filters to plugin into template framework
+interfaces.py   =   middlewares and secure cookie implementations
+mimes.py        =   list of mimes and common extensions
+validators.py   =   common validation functions for user input
+*helpers.py     =   utility functions mainly to save some typing
+-logging        =   poor man's logging shortcut (avoid using this for now!)
+sqlalchemy_ext  =   extension to the Flask-SQLAlchemy plus an ActiveRecord mixin
+                    for modles which provides useful query functions
+
+Dependencies
+-------------
+Flask-HTMLBuilder
+Flask-SQLAlchemy
+itsdangerous
 
 
-app.py (helpers.py, Flask-Silk, Flask-HTMLBuilder)
-decorators.py (helpers.py, Flask-Cache)
-filters.py
-interfaces.py (itsdangerous)
-mimes.py
-validators.py
-helpers.py (Flask-HTMLBuilder, Flask-Mako)
-
-
-Go through the sources and pick what you like for your app.
 Personalization is priceless for those of us who choose not to wear straight jackets. :)
 
 
