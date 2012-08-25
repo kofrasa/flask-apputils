@@ -4,7 +4,7 @@ import datetime as dt
 from flask_sqlalchemy import SQLAlchemy
 
 
-class _SQLAlchemyExt(SQLAlchemy):
+class SQLAlchemyExt(SQLAlchemy):
 
     def commit(self):
         return self.session.commit()
@@ -26,8 +26,6 @@ class _SQLAlchemyExt(SQLAlchemy):
     def query(self, *args, **kwargs):
         return self.session.query(*args, **kwargs)
 
-
-db = _SQLAlchemyExt()
 
 from sqlalchemy.orm import ColumnProperty, RelationshipProperty \
                             , object_mapper, class_mapper
@@ -64,54 +62,6 @@ def _get_columns(model):
 def _get_relations(model):
     return {c.key:c for c in _get_mapper(model).iterate_properties
                 if isinstance(c, RelationshipProperty)}
-
-
-# This code was adapted from :meth:`elixir.entity.Entity.to_dict` and
-# http://stackoverflow.com/q/1958219/108197.
-#
-# TODO should we have an `include` argument also?
-def _to_dict(instance, deep=None, exclude=None):
-    """Returns a dictionary representing the fields of the specified `instance`
-    of a SQLAlchemy model.
-
-    `deep` is a dictionary containing a mapping from a relation name (for a
-    relation of `instance`) to either a list or a dictionary. This is a
-    recursive structure which represents the `deep` argument when calling
-    `_to_dict` on related instances. When an empty list is encountered,
-    `_to_dict` returns a list of the string representations of the related
-    instances.
-
-    `exclude` specifies the columns which will *not* be present in the returned
-    dictionary representation of the object.
-
-    """
-    deep = deep or {}
-    exclude = exclude or ()
-    # create the dictionary mapping column name to value
-    columns = (p.key for p in object_mapper(instance).iterate_properties
-               if isinstance(p, ColumnProperty))
-    result = dict((col, getattr(instance, col)) for col in columns)
-    # Convert datetime and date objects to ISO 8601 format.
-    #
-    # TODO We can get rid of this when issue #33 is resolved.
-    for key, value in result.items():
-        if isinstance(value, datetime.date):
-            result[key] = value.isoformat()
-    # recursively call _to_dict on each of the `deep` relations
-    for relation, rdeep in deep.iteritems():
-        # exclude foreign keys of the related object for the recursive call
-        relationproperty = object_mapper(instance).get_property(relation)
-        newexclude = (key.name for key in relationproperty.remote_side)
-        # get the related value so we can see if it is None or a list
-        relatedvalue = getattr(instance, relation)
-        if relatedvalue is None:
-            result[relation] = None
-        elif isinstance(relatedvalue, list):
-            result[relation] = [_to_dict(inst, rdeep, newexclude)
-                                for inst in relatedvalue]
-        else:
-            result[relation] = _to_dict(relatedvalue, rdeep, newexclude)
-    return result
 
 
 def _select(model, *fields):
