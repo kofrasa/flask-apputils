@@ -13,7 +13,7 @@ Flask extensions.
 * helpers.py      = utility functions mainly to save some typing
 * -logging        = poor man's logging shortcut (avoid using this for now!)
 * sqlalchemy_ext  = extension to the Flask-SQLAlchemy plus an ActiveRecord mixin
-                    for modles which provides useful query functions
+                    with useful query functions for models
 
 ## Dependencies ##
 * Flask-HTMLBuilder
