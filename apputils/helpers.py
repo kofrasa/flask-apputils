@@ -34,9 +34,8 @@ def link_to(text, endpoint, **kwargs):
 
 
 def style_tag(filename, **kwargs):
-    """Creates link tag to CSS or LESS stylesheet file.
-    If no extension is given on the file, CSS is used by default.
-    To send a `.less` file the extension must be explicitly set.
+    """Creates a link tag to a CSS stylesheet file.
+    The extension '.css' is added by default if the `filename` is missing one.
 
     By default files are sent from the 'css' subdirectory in the static folder
     To link to files outside of that folder, specify an absolute path such as,
@@ -51,17 +50,13 @@ def style_tag(filename, **kwargs):
     else:
         filename = 'css/' +  filename
 
-    if filename.endswith('.less'):
-        rel = 'stylesheet/less'
-    else:
-        rel = 'stylesheet'
-        if not filename.endswith('.css'):
-            filename += '.css'
+    if not filename.endswith('.css'):
+        filename += '.css'
 
     for k in ('rel','type','href'):
         kwargs.pop(k,None)
 
-    return unicode(html.link(rel=rel, type="text/css", href=static(filename), **kwargs))
+    return unicode(html.link(rel='stylesheet', type="text/css", href=static(filename), **kwargs))
 
 
 def script_tag(filename, **kwargs):
