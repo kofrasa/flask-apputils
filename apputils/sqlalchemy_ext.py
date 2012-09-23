@@ -99,11 +99,21 @@ def _where(model, *criteria, **filters):
     """Builds a list of where conditions for this applying the correct operators
     for representing the values.
 
-    For sequence values of list, set or tuples, the SQL `IN` operator is used.
-    For single values, the SQL `=` operator.
+    `=` expression is generated for single values
+    `IN` expression is generated for list/set values
+    `BETWEEN` expression is generated for tuple values
     """
     conditions = []
     conditions.extend(criteria)
+
+    # converts a date/time string to the corresponding python object
+    def _convert_dt(val, format_string):
+        tmp = val
+        val = []
+        for v in tmp:
+            if isinstance(v,basestring):
+                val.append(dt.datetime.strptime(v, format_string))
+        return tuple(val) if isinstance(tmp, tuple) else val
     # build criteria from filters
     if filters:
         COLUMNS = _get_columns(model)
@@ -113,23 +123,90 @@ def _where(model, *criteria, **filters):
             value = filters[attr]
             prop = COLUMN[attr]
 
-            if not isinstance(value, (list,tuple,set)):
+            if isinstance(value, tuple):
+                # ensure only two values in tuple
+                lower, upper = min(value), max(value)
+                value = (lower,upper)
+            elif not isinstance(value, (list,set)):
                 value = [value]
 
-            # generate appropriate criteria expression for datetime filters
+            # format expression for datetime values
             if prop.type.python_type == dt.datetime:
+                value = _convert_dt(value, "%Y-%m-%d %H:%M:%S")
+            elif prop.type.python_type == dt.date:
+                value = _convert_dt(value, "%Y-%m-%d")
+            elif prop.type.python_type == dt.time:
+                value = _convert_dt(value, "%H:%M:%S")
+
+            if len(value) == 1:
+                # generate = statement
+                value = getattr(model,attr) == value.pop()
+            elif isinstance(value, tuple):
+                # generate BETWEEN statement
                 lower = min(value)
                 upper = max(value)
-                lower = dt.datetime(year=lower.year, month=lower.month, day=lower.day,)
-                upper = dt.datetime(year=upper.year, month=upper.month, day=upper.day,
-                                    hour=23, minute=59, second=59)
-                value = getattr(model,attr).between(lower, upper)
-            elif len(value) == 1:
-                value = getattr(model,attr) == value.pop()
+                value = getattr(model,attr).between(lower,upper)
             else:
+                # generate IN statement
                 value = getattr(model,attr).in_(value)
+
             conditions.append(value)
     return conditions
+
+
+class _QueryHelper(object):
+
+    def __init__(self, model):
+        self.cls = model
+        self.options = []
+        self.filters = []
+        self.order_by = []
+        self.group_by = []
+        self.having = None
+
+    def query(self):
+        q = self.cls.query
+        if self.options:
+            q.options(*self.options)
+        if self.filters:
+            q.filter(*self.filters)
+        if self.order_by:
+            q.order_by(*self.order_by)
+        if self.group_by:
+            q.group_by(*self.group_by)
+            if self.having:
+                q.having(self.having)
+        return q
+
+    def all(self):
+        return self.query().all()
+
+    def first(self):
+        return self.query().first()
+
+    def one(self):
+        return self.query().one()
+
+    def where(self, *criteria, **filters):
+        self.filters.extend(_where(self.cls, *criteria, **filters))
+        return self
+
+    def select(self, *fields):
+        self.options.extend(_select(self.cls, *fields))
+        return self
+
+    def order_by(self, *criteria):
+        self.order_by.extend(criteria)
+        return self
+
+    def group_by(self, *criteria):
+        self.group_by.extend(criteria)
+        return self
+
+    def having(self, criterion):
+        self.having = criterion
+        return self
+
 
 
 class ActiveRecordMixin(object):
@@ -168,18 +245,13 @@ class ActiveRecordMixin(object):
             if attr in self.attr_accessible or not self.attr_accessible:
                 if hasattr(self, attr):
                     setattr(self, attr, params[attr])
-        return self
 
     def update_attributes(self, **params):
         self.assign_attributes(**params)
-        return self.put()
+        return self.save()
 
     def save(self):
         self.query.session.add(self)
-        return self
-
-    def put(self):
-        self.save()
         self.query.session.commit()
         return self
 
@@ -218,21 +290,13 @@ class ActiveRecordMixin(object):
         return cls.query.first()
 
     @classmethod
-    def select_by(cls, *fields):
-        """Combines a SQL projection and selection in one step by returning a curried
-        function of a where clause
-        Eg. User.select_by('id','name')(name='Francis).all()
-        """
-        def whereclause(*criteria, **filters):
-            return cls.select(*fields).filter(*_where(cls, *criteria, **filters))
-        return whereclause
-
-    @classmethod
     def select(cls, *fields):
-        options = _select(cls, *fields)
-        return cls.query.options(*options)
+        q = _QueryHelper(cls)
+        q.select(cls,*fields)
+        return q
 
     @classmethod
     def where(cls, *criteria, **filters):
-        conditions = _where(cls, *criteria, **filters)
-        return cls.select().filter(*conditions)
+        q = _QueryHelper(cls)
+        q.where(*criteria, **filters)
+        return q
