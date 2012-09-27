@@ -99,9 +99,9 @@ def _where(model, *criteria, **filters):
     """Builds a list of where conditions for this applying the correct operators
     for representing the values.
 
-    `=` expression is generated for single values
-    `IN` expression is generated for list/set values
-    `BETWEEN` expression is generated for tuple values
+    `=` expression is generated for single simple values (int, str, datetime, etc.)
+    `IN` expression is generated for list/set of simple values
+    `BETWEEN` expression is generated for 2-tuple of simple values
     """
     conditions = []
     conditions.extend(criteria)
@@ -188,11 +188,13 @@ class _QueryHelper(object):
         return self.query().one()
 
     def where(self, *criteria, **filters):
-        self.filters.extend(_where(self.cls, *criteria, **filters))
+        conditions = _where(self.cls, *criteria, **filters)
+        self.filters.extend(conditions)
         return self
 
     def select(self, *fields):
-        self.options.extend(_select(self.cls, *fields))
+        options = _select(self.cls, *fields)
+        self.options.extend(options)
         return self
 
     def order_by(self, *criteria):

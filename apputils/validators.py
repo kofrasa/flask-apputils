@@ -5,6 +5,7 @@
 EMAIL_PATTERN = "^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$"
 PHONE_PATTERN = "^[0-9]{10,15}$"
 
+
 class ValidationError(ValueError):
     """
     Raised when a validator fails to validate its input.
@@ -44,7 +45,7 @@ def any_of(values, message=None):
     def wrapper(data):
         if data not in values:
             if message is None:
-                message = u"Invalid value, must be one of: %s." % str(values)
+                message = u"Invalid value, must be one of: %r." % values
             raise ValueError(message)
         return data
     return wrapper
@@ -54,7 +55,7 @@ def none_of(values, message=None):
     def wrapper(data):
         if data in values:
             if message is None:
-                message = u"Invalid value, can't be any of: %s." % str(values)
+                message = u"Invalid value, can't be any of: %r." % values
             raise ValueError(message)
         return data
     return wrapper
@@ -74,7 +75,7 @@ def equals(value,message=None):
     def wrapper(data):
         if data != value:
             if message is None:
-                message = u'Value must be equal to %s.' % str(value)
+                message = u'Value must be equal to %r.' % value
             raise ValidationError(message)
         return data
     return wrapper
@@ -104,11 +105,11 @@ def range(min=None, max=None, message=None):
                 # we use %(min)s interpolation to support floats, None, and
                 # Decimals without throwing a formatting exception.
                 if max is None:
-                    message = u'Number must be greater than %s.' % min
+                    message = u'Number must be greater than %r.' % min
                 elif min is None:
-                    message = u'Number must be less than %s.' % max
+                    message = u'Number must be less than %r.' % max
                 else:
-                    message = u'Number must be between %s and %s.' % (min, max)
+                    message = u'Number must be between %r and %r.' % (min, max)
             raise ValidationError(message)
         return data
     return wrapper
