@@ -1,89 +1,87 @@
 #!/usr/bin/env python
 
-# data validation routines borrowed from wtforms.
+# value validation routines borrowed from wtforms.
 
 EMAIL_PATTERN = "^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$"
-PHONE_PATTERN = "^[0-9]{10,15}$"
+PHONE_PATTERN = "^\+[0-9]{10,15}$"
 
 
 class ValidationError(ValueError):
     """
     Raised when a validator fails to validate its input.
     """
-    def __init__(self, message=u'', *args, **kwargs):
+    def __init__(self, message='', *args, **kwargs):
         ValueError.__init__(self, message, *args, **kwargs)
 
 
 def email(value):
-    return regexp(EMAIL_PATTERN, u"Invalid email address")(value)
+    return regexp(value, EMAIL_PATTERN)("Invalid email address")
 
 
 def phone(value):
-    return regexp(PHONE_PATTERN, u"Invalid phone number")(value)
+    return regexp(value, PHONE_PATTERN)("Invalid phone number")
 
 
-def length(min=-1, max=-1, message=None):
-    assert min != -1 or max!=-1, 'At least one of `min` or `max` must be specified.'
-    assert max == -1 or min <= max, '`min` cannot be more than `max`.'
-    def wrapper(data):
-        l = data and len(data) or 0
-        if l < min or max != -1 and l > self.max:
-            if message is None:
-                if max == -1:
-                    message = u'Field must be at least %(min)d character long.' % min
-                elif min == -1:
-                    message = u'Field cannot be longer than %(max)d character.' % max
-                else:
-                    self.message = u'Field must be between %(min)d and %(max)d characters long.'
-
-            raise ValidationError(message % dict(min=min, max=max))
-        return data
+def length(value, min=1, max=None):
+    assert min or max, 'No bounds specified'
+    assert (not max or min <= max) or \
+            (not max or max > 0) and min > 0, "Invalid bounds specified"
+    def wrapper(message=None):
+        if value is not None:
+            assert isinstance(value, basestring), "Invalid value type"
+            size = len(str(value))
+            if min is not None and size < min:
+                message = message or "Must be greater than %(min)s characters"
+            elif max is not None and size > max:
+                message = message or "Must be less than %(max)s characters"
+            else:
+                message = message or "Must be between %(min)s and %(max)s characters"
+            raise ValidationError(message % dict(min=min,max=max))
+        return value
     return wrapper
 
 
-def any_of(values, message=None):
-    def wrapper(data):
-        if data not in values:
+def any_of(value, options):
+    def wrapper(message=None):
+        if value is not None and value not in options:
             if message is None:
-                message = u"Invalid value, must be one of: %r." % values
+                message = "Must be one of: %r." % values
             raise ValueError(message)
-        return data
+        return value
     return wrapper
 
 
-def none_of(values, message=None):
-    def wrapper(data):
-        if data in values:
+def none_of(value, options):
+    def wrapper(message=None):
+        if value is not None and value in options:
             if message is None:
-                message = u"Invalid value, can't be any of: %r." % values
+                message = "Cannot be any of: %r" % values
             raise ValueError(message)
-        return data
+        return value
     return wrapper
 
 
-def required(message=None):
-    def wrapper(data):
-        if not data or isinstance(data, basestring) and not data.strip():
-            if message is None:
-                message = u'This value is required.'
+def required(value):
+    def wrapper(message='Required'):
+        if not value or isinstance(value, basestring) and not value.strip():
             raise ValueError(message)
-        return data
+        return value
     return wrapper
 
 
-def equals(value,message=None):
-    def wrapper(data):
-        if data != value:
+def equals(value, expected):
+    def wrapper(message):
+        if value != expected:
             if message is None:
-                message = u'Value must be equal to %r.' % value
+                message = 'Must be equal to %s' % value
             raise ValidationError(message)
-        return data
+        return value
     return wrapper
 
 
-def range(min=None, max=None, message=None):
+def range(value, min=None, max=None):
     """
-    Validates that a number is of a minimum and/or maximum value, inclusive.
+    Validates that a number is within a minimum and/or maximum value, inclusive.
     This will work with any comparable number type, such as floats and
     decimals, not just integers.
 
@@ -98,29 +96,25 @@ def range(min=None, max=None, message=None):
         interpolated using `%(min)s` and `%(max)s` if desired. Useful defaults
         are provided depending on the existence of min and max.
     """
-    def wrapper(data):
-        if data is None or (min is not None and data < min) or \
-            (max is not None and data > max):
-            if message is None:
-                # we use %(min)s interpolation to support floats, None, and
-                # Decimals without throwing a formatting exception.
-                if max is None:
-                    message = u'Number must be greater than %r.' % min
-                elif min is None:
-                    message = u'Number must be less than %r.' % max
-                else:
-                    message = u'Number must be between %r and %r.' % (min, max)
-            raise ValidationError(message)
-        return data
+    assert min or max, "Invalid bounds specified"
+    def wrapper(message=None):
+        if value is not None:
+            if min is not None and value < min:
+                message = message or "Must be greater than %(min)s"
+            elif max is not None and value > max:
+                message = message or "Must be less than %(max)s"
+            else:
+                message = message or "Must be between %(min)s and %(max)s"
+            raise ValidationError(message % dict(min=min,max=max))
+        return value
     return wrapper
 
 
-def regexp(pattern,message):
-    def wrapper(data):
-        import re
-        if not re.match(pattern, data or u''):
-            if message is None:
-                message = u'Invalid Input.'
+import re
+
+def regexp(value, pattern):
+    def wrapper(message="Invalid format"):
+        if value is not None and not re.match(pattern, value):
             raise ValidationError(message)
-        return data
+        return value
     return wrapper

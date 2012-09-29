@@ -246,6 +246,7 @@ class ActiveRecordMixin(object):
             if attr in self.attr_protected: continue
             if attr in self.attr_accessible or not self.attr_accessible:
                 if hasattr(self, attr):
+                    print attr
                     setattr(self, attr, params[attr])
 
     def update_attributes(self, **params):
