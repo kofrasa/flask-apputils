@@ -45,15 +45,13 @@ def _primary_key_names(obj):
     of them, ``'id'`` is returned. If `model_or_instance` specifies multiple
     primary keys and ``'id'`` is not one of them, only the name of the first
     one in the list of primary keys is returned.
-
     """
-    mapped = _get_mapper(obj)
-    return [key.name for key in mapped.primary_key]
+    return [key.name for key in _get_mapper(obj).primary_key]
+
 
 def _get_columns(model):
-    """Returns a dictionary-like object containing all the columns of the
+    """Returns a dictionary-like object containing all the columns properties of the
     specified `model` class.
-
     """
     return {c.key:c for c in _get_mapper(model).iterate_properties
                 if isinstance(c, ColumnProperty)}
@@ -83,7 +81,7 @@ def _select(model, *fields):
 
     options = []
     # ensure PKs are included and defer unrequested attributes (includes related)
-    for attr in (c.key for c in class_mapper(model).iterate_properties):
+    for attr in (c.key for c in _get_mapper(model).iterate_properties):
         if attr not in fields:
             if attr in PK_COLUMNS:
                 fields.append(attr)
@@ -116,12 +114,12 @@ def _where(model, *criteria, **filters):
         return tuple(val) if isinstance(tmp, tuple) else val
     # build criteria from filters
     if filters:
-        COLUMNS = _get_columns(model)
+        columns = {c.name:c for c in _get_mapper(model).columns
+                    if c.name in filters.keys()}
 
-        for attr in filters:
-
+        for attr in columns:
             value = filters[attr]
-            prop = COLUMN[attr]
+            prop = columns[attr]
 
             if isinstance(value, tuple):
                 # ensure only two values in tuple
