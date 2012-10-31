@@ -112,14 +112,34 @@ def _where(model, *criteria, **filters):
             if isinstance(v,basestring):
                 val.append(dt.datetime.strptime(v, format_string))
         return tuple(val) if isinstance(tmp, tuple) else val
-    # build criteria from filters
-    if filters:
-        columns = {c.name:c for c in _get_mapper(model).columns
-                    if c.name in filters.keys()}
 
-        for attr in columns:
+    # build criteria from filter
+    if filters:
+
+        filter_keys = filters.keys()
+
+        # select valid filters only
+        columns = {c.name:c for c in _get_mapper(model).columns
+                    if c.name in filter_keys}
+        relations = {c.key:c for c in _get_mapper(model).iterate_properties
+                     if isinstance(c, RelationshipProperty) and c.key in filter_keys}
+
+        for attr, rel in relations.items():
             value = filters[attr]
-            prop = columns[attr]
+            if not isinstance(value, list):
+                value = [value]
+            # validate type of object
+            for v in value:
+                assert not v or isinstance(v, rel.mapper.class_), "Type mismatch"
+
+            if len(value) == 1:
+                conditions.append(getattr(model, attr) == value[0])
+            else:
+                # Not implemented yet as of SQLAlchemy 0.7.9
+                conditions.append(getattr(model, attr).in_(value))
+
+        for attr, prop in columns.items():
+            value = filters[attr]
 
             if isinstance(value, tuple):
                 # ensure only two values in tuple
@@ -149,6 +169,7 @@ def _where(model, *criteria, **filters):
                 value = getattr(model,attr).in_(value)
 
             conditions.append(value)
+
     return conditions
 
 
@@ -184,6 +205,9 @@ class _QueryHelper(object):
 
     def one(self):
         return self.query().one()
+
+    def join(self, *props, **kwargs):
+        return self.query().join(*props, **kwargs)
 
     def where(self, *criteria, **filters):
         conditions = _where(self.cls, *criteria, **filters)
@@ -292,7 +316,7 @@ class ActiveRecordMixin(object):
     @classmethod
     def select(cls, *fields):
         q = _QueryHelper(cls)
-        q.select(cls,*fields)
+        q.select(*fields)
         return q
 
     @classmethod

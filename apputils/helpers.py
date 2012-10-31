@@ -10,7 +10,37 @@ __all__ = [
     'image_tag',
     'style_tag',
     'script_tag',
+    'ctx_set',
+    'ctx_get',
+    'ctx_clear',
+    'ctx_dump'
 ]
+
+
+# manually managed local context for passing variables across modules
+_ctx_data = {}
+
+def ctx_get(key):
+    global _ctx_data
+    return _ctx_data.get(key, None)
+
+def ctx_set(key, value):
+    global _ctx_data
+    _ctx_data[key] = value
+
+def ctx_clear(key=None):
+    global _ctx_data
+    if key:
+        _ctx_data.pop(key,None)
+    else:
+        _ctx_data.clear()
+
+def ctx_dump():
+    global _ctx_data
+    print "-- Context Dump --"
+    for k in _ctx_data:
+        print "%s:\t%r" % (k, _ctx_data[k])
+    print "------------------"
 
 
 def static(filename):

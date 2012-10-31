@@ -40,8 +40,8 @@ def ssl_required(f):
             if request.is_secure:
                 return f(*args, **kwargs)
             else:
-                return redirect(request.url.replace("http://", "https://"))        
-        return f(*args, **kwargs)            
+                return redirect(request.url.replace("http://", "https://"))
+        return f(*args, **kwargs)
     return wrapper
 
 
@@ -52,7 +52,7 @@ def as_json(f):
         from flask.wrappers import Response
         res = f(*args, **kwargs)
         if isinstance(res, Response):
-            return res        
+            return res
         return jsonify(res)
     return wrapper
 
