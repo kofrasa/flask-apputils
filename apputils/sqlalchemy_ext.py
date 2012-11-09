@@ -186,15 +186,15 @@ class _QueryHelper(object):
     def query(self):
         q = self.cls.query
         if self.options:
-            q.options(*self.options)
+            q = q.options(*self.options)
         if self.filters:
-            q.filter(*self.filters)
+            q = q.filter(*self.filters)
         if self.order_by:
-            q.order_by(*self.order_by)
+            q = q.order_by(*self.order_by)
         if self.group_by:
-            q.group_by(*self.group_by)
+            q = q.group_by(*self.group_by)
             if self.having:
-                q.having(self.having)
+                q = q.having(self.having)
         return q
 
     def all(self):
