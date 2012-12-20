@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import json
 import datetime as dt
 from flask_sqlalchemy import SQLAlchemy
 
@@ -80,7 +81,10 @@ def _select(model, *fields):
         fields.extend(COLUMNS)
 
     options = []
-    # ensure PKs are included and defer unrequested attributes (includes related)
+
+    # ensure PKs are included and defer unrequested attributes (including related)
+    # NB: we intentionally allows fields like "related.attribute" to pass through
+
     for attr in (c.key for c in _get_mapper(model).iterate_properties):
         if attr not in fields:
             if attr in PK_COLUMNS:
@@ -261,45 +265,97 @@ class ActiveRecordMixin(object):
     attr_accessible = tuple()
 
     def __init__(self, **params):
-        self.assign_attributes(**params)
+        for attr in params:
+            if hasattr(self, attr):
+                setattr(self, attr, params[attr])
+
+
+    def __repr__(self):
+        return json.dumps(self.to_dict())
+
 
     def assign_attributes(self, **params):
         for attr in params:
             if attr in self.attr_protected: continue
-            if attr in self.attr_accessible or not self.attr_accessible:
+            if not self.attr_accessible or attr in self.attr_accessible:
                 if hasattr(self, attr):
                     setattr(self, attr, params[attr])
 
+    
     def update_attributes(self, **params):
         self.assign_attributes(**params)
-        return self.save()
+        self.save()
+        return self
 
     def save(self):
         self.query.session.add(self)
         self.query.session.commit()
         return self
 
-    def to_dict(self, include=None):
+    def to_dict(self, *fields, **props):
         result = {}
+        fields = list(fields)
+
+        if fields and len(fields) == 1:
+            fields = [s.strip() for s in fields[0].split(',')]
+
+        # select columns given or all if non was specified
         for k in _get_columns(self):
-            if not include or k in include:
-                result[k] = getattr(self, k)
+            if not fields or k in fields:
+                v = getattr(self, k)
                 # change dates to isoformat
-                if isinstance(result[k], (dt.time, dt.date, dt.datetime)):
-                    result[k] = result[k].isoformat()
+                if isinstance(v, (dt.time, dt.date, dt.datetime)):
+                    v = v.isoformat()
+                result[k] = v
+                model_attr.append(k)
+
+        # check if there are relationships
+        rel_attr = list(set(fields)-set(model_attr))
+        rel_map = {}
+        for k in rel_attr:
+            if '.' in k:
+                index = k.index(".")
+                model,attr = k[:index], k[index+1:]
+                if model not in rel_map:
+                    rel_map[model] = []
+                rel_map[model].append(attr)
+            else:
+                rel_map[k] = []
+
         # handle relationships
-        for k, rel in _get_relations(self).items():
-            if not include or k in include:
-                relcolumns = _get_columns(rel.mapper.class_)
-                for c in (r.key for r in rel.remote_side):
-                    relcolumns.pop(c)
+        if rel_map:
+            for k,rel in _get_relations(self).items():
+                if k not in rel_map:
+                    continue
                 value = getattr(self, k)
+                fields = rel_map[k]
                 if isinstance(value, list):
-                    result[k] = [val.to_dict(include=relcolumns.keys())
-                                 for val in value]
+                    result[k] = [v.to_dict(*fields) for v in value]
                 else:
-                    result[k] = value.to_dict(include=relcolumns.keys())
+                    result[k] = value.to_dict(*fields)
+
+        #for k, rel in _get_relations(self).items():
+        #    if not include or k in include:
+        #        relcolumns = _get_columns(rel.mapper.class_)
+        #        for c in (r.key for r in rel.remote_side):
+        #            relcolumns.pop(c)
+        #        value = getattr(self, k)
+        #        if isinstance(value, list):
+        #            result[k] = [val.to_dict(include=relcolumns.keys())
+        #                         for val in value]
+        #        else:
+        #            result[k] = value.to_dict(include=relcolumns.keys())
+
+        # add extra properties
+        for k in props.keys():
+            if k not in result:
+                result[k] = props[k]
+
         return result
+    
+    @classmethod
+    def create(cls, **kw):
+        return cls(**kw).save()
 
     @classmethod
     def find(cls,ident):

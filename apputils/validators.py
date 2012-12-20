@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# value validation routines borrowed from wtforms.
+# value validation routines from wtforms.
 
 EMAIL_PATTERN = "^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$"
 PHONE_PATTERN = "^\+[0-9]{10,15}$"
