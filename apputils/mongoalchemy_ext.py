@@ -6,6 +6,8 @@ from mongoalchemy.document import Document
 
 
 def _mongo_serialize(value):
+    """Serializes mongo values
+    """
     if value is None or isinstance(value, (int,long,float,basestring,bool)):
         return value
     elif isinstance(value, (list,tuple,set)):
@@ -22,6 +24,52 @@ def _mongo_serialize(value):
         return value.to_dict()
     else:
         return str(value)
+    
+
+def _mongo_dict(doc,*fields,**props):
+    """Returns a JSON serializable representation of the given document(s)
+    """
+    result = []
+    fields = list(fields)
+    
+    if fields and len(fields) == 1:
+        fields = [s.strip() for s in fields[0].split(',')]
+        
+    fields = list(set(fields))
+    if 'id' in fields:
+        fields.remove('id')
+        if 'mongo_id' not in fields:
+            fields.append('mongo_id')        
+    
+    # pop of meta information
+    _overwrite = props.pop('_overwrite', None)
+    _exclude = props.pop('_exclude', [])
+    if isinstance(_exclude,basestring):
+        _exclude = [e.strip() for e in _exclude.split(',')]
+    
+    many = not isinstance(doc, ActiveDocument)
+    if not many:
+        doc = [doc]
+        
+    for d in doc:
+        # select columns specified, or all if none
+        fields = fields or d.get_fields()
+        val = {}
+        for k in fields:
+            if k in _exclude: continue
+            if hasattr(d,k):
+                v = _mongo_serialize(getattr(d, k))
+                k = 'id' if k == 'mongo_id' else k
+                val[k] = v
+    
+        # add extra properties
+        for k in props:
+            if _overwrite or k not in val:
+                val[k] = props[k]
+        
+        result.append(val)
+            
+    return result[0] if not many else result
 
 
 class _QueryHelper(object):
@@ -54,28 +102,22 @@ class _QueryHelper(object):
         criteria = list(criteria) if criteria else []
         
         for attr in filters:
-            if attr not in doc_fields:
+            if attr not in doc_fields or filters[attr] is None:
                 continue
 
             value = filters[attr]
             if isinstance(value, tuple):
                 # ensure only two values in tuple
                 lower, upper = min(value), max(value)
-                value = (lower,upper)
-            elif not isinstance(value, (list,set)):
-                value = [value]
-
-            if len(value) == 1:
-                # generate = statement
-                criteria.append(getattr(self.cls,attr) == value[0])
-            elif isinstance(value, tuple):
-                # generate BETWEEN statement
-                lower, upper = value            
-                criteria.append(getattr(model,attr) >= value[0])
-                criteria.append(getattr(model,attr) <= value[1])
-            else:
+                # generate BETWEEN statement         
+                criteria.append(getattr(self.cls,attr) >= lower)
+                criteria.append(getattr(self.cls,attr) <= upper)
+            elif isinstance(value, (list,set)):
                 # generate IN statement
-                criteria.append(getattr(model,attr).in_(value))
+                criteria.append(getattr(self.cls,attr).in_(*value))
+            else:
+                # generate = statement
+                criteria.append(getattr(self.cls,attr) == value)
             
         self.filters.extend(criteria)
         return self
@@ -101,9 +143,10 @@ class ActiveDocument(object):
 
     def assign_attributes(self, **params):
         for attr in params:
+            if params[attr] is None: continue
             if attr in self._attr_protected: continue
             if attr in self._attr_accessible or not self._attr_accessible:
-                if hasattr(self, attr):
+                if hasattr(self,attr):
                     setattr(self, attr, params[attr])
 
     def update_attributes(self, **params):
@@ -111,42 +154,14 @@ class ActiveDocument(object):
         self.save()
         return self
 
-
     def to_dict(self, *fields, **props):
-        result = {}
-        fields = list(fields)
-        
-        if fields and len(fields) == 1:
-            fields = [s.strip() for s in fields[0].split(',')]
-            
-        fields = list(set(fields))
-        if 'id' in fields:
-            fields.remove('id')
-            if 'mongo_id' not in fields:
-                fields.append('mongo_id')        
-        
-        # pop of meta information
-        meta = {}
-        for k in ['_overwrite']:
-            meta[k] = props.pop(k,None)
-            
-        # select columns specified, or all if none
-        fields = fields or self.get_fields()
-        for k in fields:
-            if hasattr(self,k):
-                v = _mongo_serialize(getattr(self, k))
-                k = 'id' if k == 'mongo_id' else k
-                result[k] = v
-
-        # add extra properties
-        for k in props:
-            if meta['_overwrite'] or k not in result:
-                result[k] = props[k]
-                
-        return result
+        return _mongo_dict(self,*fields,**props)
     
     @classmethod
     def create(cls,**params):
+        for k,v in params.items():
+            if v is None:
+                params.pop(k)
         obj = cls(**params)
         obj.save()
         return obj

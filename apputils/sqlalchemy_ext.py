@@ -334,18 +334,6 @@ class ActiveRecordMixin(object):
                 else:
                     result[k] = value.to_dict(*fields)
 
-        #for k, rel in _get_relations(self).items():
-        #    if not include or k in include:
-        #        relcolumns = _get_columns(rel.mapper.class_)
-        #        for c in (r.key for r in rel.remote_side):
-        #            relcolumns.pop(c)
-        #        value = getattr(self, k)
-        #        if isinstance(value, list):
-        #            result[k] = [val.to_dict(include=relcolumns.keys())
-        #                         for val in value]
-        #        else:
-        #            result[k] = value.to_dict(include=relcolumns.keys())
-
         # add extra properties
         for k in props.keys():
             if k not in result:
