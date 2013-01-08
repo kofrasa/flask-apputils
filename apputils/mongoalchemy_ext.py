@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#-*- coding: utf-8 -*-
 
 import json
 import datetime as dt
@@ -29,6 +30,9 @@ def _mongo_serialize(value):
 def _mongo_dict(doc,*fields,**props):
     """Returns a JSON serializable representation of the given document(s)
     """
+    if not doc:
+        return None
+    
     result = []
     fields = list(fields)
     
@@ -101,10 +105,13 @@ class _QueryHelper(object):
         doc_fields = self.cls.get_fields()        
         criteria = list(criteria) if criteria else []
         
+        if 'id' in filters:
+            filters['mongo_id'] = filters.pop('id')
+
         for attr in filters:
             if attr not in doc_fields or filters[attr] is None:
                 continue
-
+            
             value = filters[attr]
             if isinstance(value, tuple):
                 # ensure only two values in tuple
@@ -114,7 +121,7 @@ class _QueryHelper(object):
                 criteria.append(getattr(self.cls,attr) <= upper)
             elif isinstance(value, (list,set)):
                 # generate IN statement
-                criteria.append(getattr(self.cls,attr).in_(*value))
+                criteria.append(getattr(self.cls,attr).in_(*list(value)))
             else:
                 # generate = statement
                 criteria.append(getattr(self.cls,attr) == value)
@@ -123,7 +130,9 @@ class _QueryHelper(object):
         return self
 
     def select(self, *fields):
-        self.fields = list(fields) if len(fields) > 1 else [k.strip() for k in fields[0].split(',')]        
+        if fields:
+            for w in fields:
+                self.fields.extend([k.strip() for k in w.split(',')])
         return self
 
 
@@ -173,11 +182,9 @@ class ActiveDocument(object):
     @classmethod
     def select(cls, *fields):
         q = _QueryHelper(cls)
-        q.select(*fields)
-        return q
+        return q.select(*fields)
 
     @classmethod
     def where(cls, *criteria, **filters):
         q = _QueryHelper(cls)
-        q.where(*criteria, **filters)
-        return q
+        return q.where(*criteria, **filters)
