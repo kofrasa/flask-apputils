@@ -100,7 +100,7 @@ _mimetypes = {
 };
 
 
-def get_mimes(extension=None):
+def get_mimetypes(extension=None):
     """Returns the mimetypes for the given extension"""   
     return _mimetypes.get(extension) if extension else None
 

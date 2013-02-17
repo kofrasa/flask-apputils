@@ -4,10 +4,13 @@
 import json
 import datetime as dt
 from mongoalchemy.document import Document
+from mongoalchemy.update_expression import UpdateExpression
 
 
 def _mongo_serialize(value):
-    """Serializes mongo values
+    """Returns a JSON serializable python type of the given value
+    
+    :param `value` 
     """
     if value is None or isinstance(value, (int,long,float,basestring,bool)):
         return value
@@ -21,40 +24,51 @@ def _mongo_serialize(value):
     elif isinstance(value, (dt.time, dt.date, dt.datetime)):
         value = value.replace(microsecond=0)
         return value.isoformat()
-    elif isinstance(value, ActiveDocument):
-        return value.to_dict()
+    elif isinstance(value, Document):
+        return _mongo_dict(value)
     else:
-        return str(value)
+        return unicode(value)
     
 
 def _mongo_dict(doc,*fields,**props):
-    """Returns a JSON serializable representation of the given document(s)
+    """Returns a JSON serializable `dict` representation of the given document(s)
+    
+    :param `doc` mongo document or list of mongo documents
+    :param `*fields` fields to select from the document
+    :param `**props` extra properties to attach to JSON object
     """
     if not doc:
         return None
     
     result = []
-    fields = list(fields)
     
-    if fields and len(fields) == 1:
-        fields = [s.strip() for s in fields[0].split(',')]
+    fields = list(fields)    
+    # handle aliases    
+    alias = {'mongo_id':'id'}
+    temp_fields = fields[:]
+    fields = []
+    for k in temp_fields:
+        if isinstance(k, tuple):
+            alias[k[0]] = k[1]
+            k = k[0]
+        fields.append(k)
         
-    fields = list(set(fields))
-    if 'id' in fields:
-        fields.remove('id')
-        if 'mongo_id' not in fields:
-            fields.append('mongo_id')        
+    # do this ONLY if fields are given
+    if fields: 
+        fields.append('id')
+        fields = set(fields) - set(['mongo_id'])
     
     # pop of meta information
     _overwrite = props.pop('_overwrite', None)
     _exclude = props.pop('_exclude', [])
-    if isinstance(_exclude,basestring):
+    if isinstance(_exclude, basestring):
         _exclude = [e.strip() for e in _exclude.split(',')]
     
-    many = not isinstance(doc, ActiveDocument)
+    many = not isinstance(doc, Document)
     if not many:
         doc = [doc]
-        
+    
+    
     for d in doc:
         # select columns specified, or all if none
         fields = fields or d.get_fields()
@@ -63,16 +77,12 @@ def _mongo_dict(doc,*fields,**props):
             if k in _exclude: continue
             if hasattr(d,k):
                 v = _mongo_serialize(getattr(d, k))
-                k = 'id' if k == 'mongo_id' else k
-                val[k] = v
+                val[alias.get(k,k)] = v
     
         # add extra properties
         for k in props:
-            if _overwrite or k not in val:
-                val[k] = props[k]
-        
-        result.append(val)
-            
+            val[k] = _mongo_serialize(props[k])     
+        result.append(val)            
     return result[0] if not many else result
 
 
@@ -150,12 +160,13 @@ class ActiveDocument(object):
     def __repr__(self):
         return json.dumps(self.to_dict())
 
-    def assign_attributes(self, **params):
+    def assign_attributes(self, **params):        
+        doc_fields = self.get_fields()
         for attr in params:
             if params[attr] is None: continue
             if attr in self._attr_protected: continue
             if attr in self._attr_accessible or not self._attr_accessible:
-                if hasattr(self,attr):
+                if attr in doc_fields:
                     setattr(self, attr, params[attr])
 
     def update_attributes(self, **params):
@@ -165,6 +176,13 @@ class ActiveDocument(object):
 
     def to_dict(self, *fields, **props):
         return _mongo_dict(self,*fields,**props)
+    
+    def unset(self,*fields):        
+        q = self.__class__.query.filter(self.__class__.mongo_id==self.mongo_id)
+        ex = UpdateExpression(q)
+        for key in fields:
+            ex.unset(getattr(self.__class__,key,None))
+        ex.execute()
     
     @classmethod
     def create(cls,**params):
