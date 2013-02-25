@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from flask.globals import current_app as app
 from flask import g, url_for, get_flashed_messages
 from flaskext.htmlbuilder import html
+from jinja2.utils import Markup
 
 __all__ = [
     'static',
@@ -13,7 +15,8 @@ __all__ = [
 ]
 
 def static(filename):
-    return url_for('static', filename=filename)
+    folder = app.config.get('STATIC_FOLDER', 'static')
+    return url_for(folder, filename=filename)
 
 
 def get_flash(category=None, sep='\n'):
@@ -25,11 +28,12 @@ def get_flash(category=None, sep='\n'):
 
 def link_to(text, endpoint, **kwargs):
     try:
-        url = url_for(endpoint)
+        kwargs['_external'] = True
+        url = url_for(endpoint, **kwargs)
         endpoint = url
     except:
         pass
-    return unicode(html.a(href=endpoint, **kwargs)(text))
+    return Markup(html.a(href=endpoint, **kwargs)(text))
 
 
 def style_tag(filename, **kwargs):
@@ -55,7 +59,7 @@ def style_tag(filename, **kwargs):
     for k in ('rel','type','href'):
         kwargs.pop(k,None)
 
-    return unicode(html.link(rel='stylesheet', type="text/css", href=static(filename), **kwargs))
+    return Markup(html.link(rel='stylesheet', type="text/css", href=static(filename), **kwargs))
 
 
 def script_tag(filename, **kwargs):
@@ -67,7 +71,7 @@ def script_tag(filename, **kwargs):
     if not filename.endswith('.js'):
         filename += '.js'
 
-    return unicode(html.script(type="text/javascript",
+    return Markup(html.script(type="text/javascript",
                                src=static(filename), **kwargs)())
 
 
@@ -77,5 +81,4 @@ def image_tag(filename, **kwargs):
         filename = ''.join(filename[1:])
     else:
         filename = 'img/' +  filename
-
-    return unicode(html.img(src=static(filename), **kwargs))
+    return Markup(html.img(src=static(filename), **kwargs))
