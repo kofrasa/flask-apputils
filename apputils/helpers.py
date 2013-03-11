@@ -16,7 +16,7 @@ __all__ = [
 
 def static(filename):
     folder = app.config.get('STATIC_FOLDER', 'static')
-    return url_for(folder, filename=filename)
+    return url_for(folder, filename=filename, _external=True)
 
 
 def get_flash(category=None, sep='\n'):
@@ -28,8 +28,7 @@ def get_flash(category=None, sep='\n'):
 
 def link_to(text, endpoint, **kwargs):
     try:
-        kwargs['_external'] = True
-        url = url_for(endpoint, **kwargs)
+        url = url_for(endpoint, _external=True)
         endpoint = url
     except:
         pass
