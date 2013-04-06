@@ -159,6 +159,12 @@ class ActiveDocument(object):
 
     def __repr__(self):
         return json.dumps(self.to_dict())
+    
+    def __delattr__(self, field):
+        q = self.__class__.query.filter(self.__class__.mongo_id==self.mongo_id)
+        ex = UpdateExpression(q)
+        ex.unset(getattr(self.__class__,field))
+        ex.execute()
 
     def assign_attributes(self, **params):        
         doc_fields = self.get_fields()
