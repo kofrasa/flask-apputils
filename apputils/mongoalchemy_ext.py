@@ -182,13 +182,7 @@ class ActiveDocument(object):
 
     def to_dict(self, *fields, **props):
         return _mongo_dict(self,*fields,**props)
-    
-    def unset(self,*fields):        
-        q = self.__class__.query.filter(self.__class__.mongo_id==self.mongo_id)
-        ex = UpdateExpression(q)
-        for key in fields:
-            ex.unset(getattr(self.__class__,key,None))
-        ex.execute()
+
     
     @classmethod
     def create(cls,**params):
