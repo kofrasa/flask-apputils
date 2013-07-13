@@ -63,6 +63,103 @@ def _get_relations(model):
                 if isinstance(c, RelationshipProperty)}
 
 
+def _model_dict(models, *fields, **props):
+    """Converts an SQL model object to JSON dict
+    """
+    result = []
+    fields = list(fields)
+    is_many = isinstance(models, list)
+    if not is_many:
+        models = [models]
+
+    if fields and len(fields) == 1:
+        fields = [s.strip() for s in fields[0].split(',')]
+        
+    # pop of meta information
+    _overwrite = props.pop('_overwrite', None)
+    _exclude = props.pop('_exclude', [])
+    if isinstance(_exclude, basestring):
+        _exclude = [e.strip() for e in _exclude.split(',')]
+    
+    # select columns given or all if non was specified
+    model_attr = set(_get_columns(models[0]))
+    if fields:
+        model_attr = model_attr & set(fields)
+    else:
+        fields = model_attr
+    model_attr = model_attr - set(_exclude)
+        
+    related_attr = set(fields) - model_attr
+    # check if there are relationships
+    related_fields = _get_relations(models[0]).keys()
+    related_map = {}
+    # check if remaining fields are valid related attributes
+    for k in related_attr:
+        if '.' in k:
+            index = k.index(".")
+            model,attr = k[:index], k[index+1:]
+            if model in related_fields:
+                related_map[model] = related_map.get(model, [])
+            related_map[model].append(attr)
+        elif k in related_fields:
+            related_map[k] = []
+    
+    # no fields to return
+    if not model_attr and not related_map:
+        return {}
+        
+    
+    for model in models:
+        data = {}
+        # handle column attributes
+        for k in model_attr:
+            if k in model.attr_hidden: continue
+            v = getattr(model, k)
+            # change dates to human readable format
+            data[k] = _model_serialize(v)
+    
+        # handle relationships
+        for k in related_map:
+            val = getattr(model, k)
+            fields = related_map[k]
+            data[k] = _model_dict(val,*fields)   
+    
+        # add extra properties
+        for k in props.keys():
+            if k not in data:
+                data[k] = props[k]
+        
+        # add to results
+        result.append(data)
+        
+    # get correct response
+    result = result if is_many else result[0]
+    return result
+
+
+def _model_serialize(value):
+    """Returns a JSON serializable python type of the given value
+    
+    :param `value` 
+    """
+    if value is None or isinstance(value, (int,long,float,basestring,bool)):
+        return value
+    elif isinstance(value, (list,tuple,set)):
+        return [_model_serialize(v) for v in value]
+    elif isinstance(value, dict):
+        for k,v in value.items():
+            value[k] = _model_serialize(v)
+        return value
+    # change dates to isoformat
+    elif isinstance(value, (dt.time, dt.date, dt.datetime)):
+        value = value.replace(microsecond=0)
+        return value.isoformat()
+    elif isinstance(value, ActiveRecordMixin):
+        return _model_dict(value)
+    else:
+        return unicode(value) 
+
+
 def _select(model, *fields):
 
     from sqlalchemy.orm import defer, lazyload
@@ -115,6 +212,8 @@ def _where(model, *criteria, **filters):
         for v in tmp:
             if isinstance(v,basestring):
                 val.append(dt.datetime.strptime(v, format_string))
+            else:
+                val.append(v)
         return tuple(val) if isinstance(tmp, tuple) else val
 
     # build criteria from filter
@@ -149,9 +248,9 @@ def _where(model, *criteria, **filters):
                 # ensure only two values in tuple
                 lower, upper = min(value), max(value)
                 value = (lower,upper)
-            elif not isinstance(value, (list,set)):
+            elif not isinstance(value, list):
                 value = [value]
-
+                
             # format expression for datetime values
             if prop.type.python_type == dt.datetime:
                 value = _convert_dt(value, "%Y-%m-%d %H:%M:%S")
@@ -159,7 +258,7 @@ def _where(model, *criteria, **filters):
                 value = _convert_dt(value, "%Y-%m-%d")
             elif prop.type.python_type == dt.time:
                 value = _convert_dt(value, "%H:%M:%S")
-
+    
             if len(value) == 1:
                 # generate = statement
                 value = getattr(model,attr) == value.pop()
@@ -259,10 +358,11 @@ class ActiveRecordMixin(object):
     """
 
     #attributes protected from mass assignment
-    attr_protected = tuple()
-
+    attr_protected = tuple()    
     #attributes accessible through mass assignments and also returned by to_json
     attr_accessible = tuple()
+    # attributes protected from JSON serialization
+    attr_hidden = tuple()
 
     def __init__(self, **params):
         for attr in params:
@@ -280,12 +380,11 @@ class ActiveRecordMixin(object):
             if not self.attr_accessible or attr in self.attr_accessible:
                 if hasattr(self, attr):
                     setattr(self, attr, params[attr])
+        return self
 
-    
     def update_attributes(self, **params):
         self.assign_attributes(**params)
-        self.save()
-        return self
+        return self.save()
 
     def save(self):
         self.query.session.add(self)
@@ -293,53 +392,7 @@ class ActiveRecordMixin(object):
         return self
 
     def to_dict(self, *fields, **props):
-        result = {}
-        fields = list(fields)
-
-        if fields and len(fields) == 1:
-            fields = [s.strip() for s in fields[0].split(',')]
-
-        # select columns given or all if non was specified
-        for k in _get_columns(self):
-            if not fields or k in fields:
-                v = getattr(self, k)
-                # change dates to isoformat
-                if isinstance(v, (dt.time, dt.date, dt.datetime)):
-                    v = v.isoformat()
-                result[k] = v
-                model_attr.append(k)
-
-        # check if there are relationships
-        rel_attr = list(set(fields)-set(model_attr))
-        rel_map = {}
-        for k in rel_attr:
-            if '.' in k:
-                index = k.index(".")
-                model,attr = k[:index], k[index+1:]
-                if model not in rel_map:
-                    rel_map[model] = []
-                rel_map[model].append(attr)
-            else:
-                rel_map[k] = []
-
-        # handle relationships
-        if rel_map:
-            for k,rel in _get_relations(self).items():
-                if k not in rel_map:
-                    continue
-                value = getattr(self, k)
-                fields = rel_map[k]
-                if isinstance(value, list):
-                    result[k] = [v.to_dict(*fields) for v in value]
-                else:
-                    result[k] = value.to_dict(*fields)
-
-        # add extra properties
-        for k in props.keys():
-            if k not in result:
-                result[k] = props[k]
-
-        return result
+        return _model_dict(self, *fields, **props)
     
     @classmethod
     def create(cls, **kw):

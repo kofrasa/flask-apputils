@@ -3,7 +3,6 @@
 # value validation routines from wtforms.
 
 EMAIL_PATTERN = "^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$"
-PHONE_PATTERN = "^\+[0-9]{10,15}$"
 
 
 class ValidationError(ValueError):
@@ -16,10 +15,6 @@ class ValidationError(ValueError):
 
 def email(value):
     return regexp(value, EMAIL_PATTERN)("Invalid email address")
-
-
-def phone(value):
-    return regexp(value, PHONE_PATTERN)("Invalid phone number")
 
 
 def length(value, min=1, max=None):
@@ -114,7 +109,7 @@ import re
 
 def regexp(value, pattern):
     def wrapper(message="Invalid format"):
-        if value is not None and not re.match(pattern, value):
+        if value and not re.match(pattern, value):
             raise ValidationError(message)
         return value
     return wrapper
