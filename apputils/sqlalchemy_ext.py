@@ -153,7 +153,7 @@ def _model_serialize(value):
     # change dates to isoformat
     elif isinstance(value, (dt.time, dt.date, dt.datetime)):
         value = value.replace(microsecond=0)
-        return value.isoformat()
+        return value.isoformat().replace("T", " ")
     elif isinstance(value, ActiveRecordMixin):
         return _model_dict(value)
     else:
@@ -369,10 +369,8 @@ class ActiveRecordMixin(object):
             if hasattr(self, attr):
                 setattr(self, attr, params[attr])
 
-
     def __repr__(self):
         return json.dumps(self.to_dict())
-
 
     def assign_attributes(self, **params):
         for attr in params:
