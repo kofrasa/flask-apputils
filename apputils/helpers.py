@@ -2,7 +2,6 @@
 
 from flask.globals import current_app as app
 from flask import g, url_for, get_flashed_messages
-from flaskext.htmlbuilder import html
 from jinja2.utils import Markup
 
 __all__ = [
@@ -32,7 +31,9 @@ def link_to(text, endpoint, **kwargs):
         endpoint = url
     except:
         pass
-    return Markup(html.a(href=endpoint, **kwargs)(text))
+    
+    kwargs["href"] = endpoint
+    return Markup("<a %s>%s</a>" % (_format_attr(**kwargs), text))
 
 
 def style_tag(filename, **kwargs):
@@ -55,10 +56,12 @@ def style_tag(filename, **kwargs):
     if not filename.endswith('.css'):
         filename += '.css'
 
-    for k in ('rel','type','href'):
-        kwargs.pop(k,None)
-
-    return Markup(html.link(rel='stylesheet', type="text/css", href=static(filename), **kwargs))
+    kwargs["rel"] = "stylesheet"
+    kwargs["type"] = "text/css"
+    kwargs["href"] = static(filename)
+    
+    return Markup("<link %s/>" % _format_attr(**kwargs))
+    
 
 
 def script_tag(filename, **kwargs):
@@ -69,9 +72,11 @@ def script_tag(filename, **kwargs):
         filename = 'js/' +  filename
     if not filename.endswith('.js'):
         filename += '.js'
-
-    return Markup(html.script(type="text/javascript",
-                               src=static(filename), **kwargs)())
+    
+    kwargs['src'] = static(filename)
+    kwargs['type'] = "text/javascript"
+    
+    return Markup("<script %s></script>" % _format_attr(**kwargs))
 
 
 def image_tag(filename, **kwargs):
@@ -80,4 +85,13 @@ def image_tag(filename, **kwargs):
         filename = ''.join(filename[1:])
     else:
         filename = 'img/' +  filename
-    return Markup(html.img(src=static(filename), **kwargs))
+        
+    kwargs['src'] = static(filename)
+    return Markup("<img %s>" % _format_attr(**kwargs))
+
+
+def _format_attr(**kwargs):
+    attr = []
+    for key, value in kwargs.items():
+        attr.append("%s=\"%s\"" % (key, value))
+    return " ".join(attr)
