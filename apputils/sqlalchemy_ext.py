@@ -6,16 +6,15 @@ from flask_sqlalchemy import SQLAlchemy
 
 
 class SQLAlchemyExt(SQLAlchemy):
-
     def commit(self):
         return self.session.commit()
 
     def rollback(self):
         return self.session.rollback()
 
-    def execute(self, obj, *multiparams, **params):
+    def execute(self, obj, *args, **params):
         conn = self.engine.connect()
-        result = conn.execute(obj, *multiparams, **params)
+        result = conn.execute(obj, *args, **params)
         return result
 
     def add(self, model):
@@ -28,8 +27,8 @@ class SQLAlchemyExt(SQLAlchemy):
         return self.session.query(*args, **kwargs)
 
 
-from sqlalchemy.orm import ColumnProperty, RelationshipProperty \
-                            , object_mapper, class_mapper
+from sqlalchemy.orm import ColumnProperty, RelationshipProperty, object_mapper, class_mapper
+from sqlalchemy import func
 
 
 def _get_mapper(obj):
@@ -37,6 +36,7 @@ def _get_mapper(obj):
     its_a_model = isinstance(obj, type)
     mapper = class_mapper if its_a_model else object_mapper
     return mapper(obj)
+
 
 def _primary_key_names(obj):
     """Returns the name of the primary key of the specified model or instance
@@ -54,13 +54,13 @@ def _get_columns(model):
     """Returns a dictionary-like object containing all the columns properties of the
     specified `model` class.
     """
-    return {c.key:c for c in _get_mapper(model).iterate_properties
-                if isinstance(c, ColumnProperty)}
+    return {c.key: c for c in _get_mapper(model).iterate_properties
+            if isinstance(c, ColumnProperty)}
 
 
 def _get_relations(model):
-    return {c.key:c for c in _get_mapper(model).iterate_properties
-                if isinstance(c, RelationshipProperty)}
+    return {c.key: c for c in _get_mapper(model).iterate_properties
+            if isinstance(c, RelationshipProperty)}
 
 
 def _model_dict(models, *fields, **props):
@@ -74,13 +74,13 @@ def _model_dict(models, *fields, **props):
 
     if fields and len(fields) == 1:
         fields = [s.strip() for s in fields[0].split(',')]
-        
+
     # pop of meta information
-    _overwrite = props.pop('_overwrite', None)
+    # _overwrite = props.pop('_overwrite', None)
     _exclude = props.pop('_exclude', [])
     if isinstance(_exclude, basestring):
         _exclude = [e.strip() for e in _exclude.split(',')]
-    
+
     # select columns given or all if non was specified
     model_attr = set(_get_columns(models[0]))
     if fields:
@@ -88,7 +88,7 @@ def _model_dict(models, *fields, **props):
     else:
         fields = model_attr
     model_attr = model_attr - set(_exclude)
-        
+
     related_attr = set(fields) - model_attr
     # check if there are relationships
     related_fields = _get_relations(models[0]).keys()
@@ -97,41 +97,41 @@ def _model_dict(models, *fields, **props):
     for k in related_attr:
         if '.' in k:
             index = k.index(".")
-            model,attr = k[:index], k[index+1:]
+            model, attr = k[:index], k[index + 1:]
             if model in related_fields:
                 related_map[model] = related_map.get(model, [])
             related_map[model].append(attr)
         elif k in related_fields:
             related_map[k] = []
-    
+
     # no fields to return
     if not model_attr and not related_map:
         return {}
-        
-    
+
     for model in models:
         data = {}
         # handle column attributes
         for k in model_attr:
-            if k in model.attr_hidden: continue
+            if k in model._attr_hidden:
+                continue
             v = getattr(model, k)
             # change dates to human readable format
             data[k] = _model_serialize(v)
-    
+
         # handle relationships
         for k in related_map:
             val = getattr(model, k)
             fields = related_map[k]
-            data[k] = _model_dict(val,*fields)   
-    
-        # add extra properties
+            data[k] = _model_dict(val, *fields)
+
+            # add extra properties
         for k in props.keys():
             if k not in data:
                 data[k] = props[k]
-        
+
         # add to results
         result.append(data)
-        
+
     # get correct response
     result = result if is_many else result[0]
     return result
@@ -142,12 +142,12 @@ def _model_serialize(value):
     
     :param `value` 
     """
-    if value is None or isinstance(value, (int,long,float,basestring,bool)):
+    if value is None or isinstance(value, (int, long, float, basestring, bool)):
         return value
-    elif isinstance(value, (list,tuple,set)):
+    elif isinstance(value, (list, tuple, set)):
         return [_model_serialize(v) for v in value]
     elif isinstance(value, dict):
-        for k,v in value.items():
+        for k, v in value.items():
             value[k] = _model_serialize(v)
         return value
     # change dates to isoformat
@@ -157,11 +157,10 @@ def _model_serialize(value):
     elif isinstance(value, ActiveRecordMixin):
         return _model_dict(value)
     else:
-        return unicode(value) 
+        return unicode(value)
 
 
 def _select(model, *fields):
-
     from sqlalchemy.orm import defer, lazyload
 
     PK_COLUMNS = _primary_key_names(model)
@@ -210,7 +209,7 @@ def _where(model, *criteria, **filters):
         tmp = val
         val = []
         for v in tmp:
-            if isinstance(v,basestring):
+            if isinstance(v, basestring):
                 val.append(dt.datetime.strptime(v, format_string))
             else:
                 val.append(v)
@@ -222,16 +221,16 @@ def _where(model, *criteria, **filters):
         filter_keys = filters.keys()
 
         # select valid filters only
-        columns = {c.name:c for c in _get_mapper(model).columns
-                    if c.name in filter_keys}
-        relations = {c.key:c for c in _get_mapper(model).iterate_properties
+        columns = {c.name: c for c in _get_mapper(model).columns
+                   if c.name in filter_keys}
+        relations = {c.key: c for c in _get_mapper(model).iterate_properties
                      if isinstance(c, RelationshipProperty) and c.key in filter_keys}
 
         for attr, rel in relations.items():
             value = filters[attr]
             if not isinstance(value, list):
                 value = [value]
-            # validate type of object
+                # validate type of object
             for v in value:
                 assert not v or isinstance(v, rel.mapper.class_), "Type mismatch"
 
@@ -247,10 +246,10 @@ def _where(model, *criteria, **filters):
             if isinstance(value, tuple):
                 # ensure only two values in tuple
                 lower, upper = min(value), max(value)
-                value = (lower,upper)
+                value = (lower, upper)
             elif not isinstance(value, list):
                 value = [value]
-                
+
             # format expression for datetime values
             if prop.type.python_type == dt.datetime:
                 value = _convert_dt(value, "%Y-%m-%d %H:%M:%S")
@@ -258,18 +257,18 @@ def _where(model, *criteria, **filters):
                 value = _convert_dt(value, "%Y-%m-%d")
             elif prop.type.python_type == dt.time:
                 value = _convert_dt(value, "%H:%M:%S")
-    
+
             if len(value) == 1:
                 # generate = statement
-                value = getattr(model,attr) == value.pop()
+                value = getattr(model, attr) == value.pop()
             elif isinstance(value, tuple):
                 # generate BETWEEN statement
                 lower = min(value)
                 upper = max(value)
-                value = getattr(model,attr).between(lower,upper)
+                value = getattr(model, attr).between(lower, upper)
             else:
                 # generate IN statement
-                value = getattr(model,attr).in_(value)
+                value = getattr(model, attr).in_(value)
 
             conditions.append(value)
 
@@ -277,7 +276,6 @@ def _where(model, *criteria, **filters):
 
 
 class _QueryHelper(object):
-
     def __init__(self, model):
         self.cls = model
         self.options = []
@@ -286,7 +284,7 @@ class _QueryHelper(object):
         self.group_by = []
         self.having = None
 
-    def query(self):
+    def _query(self):
         q = self.cls.query
         if self.options:
             q = q.options(*self.options)
@@ -301,16 +299,19 @@ class _QueryHelper(object):
         return q
 
     def all(self):
-        return self.query().all()
+        return self._query().all()
 
     def first(self):
-        return self.query().first()
+        return self._query().first()
 
     def one(self):
-        return self.query().one()
+        return self._query().one()
+
+    def count(self):
+        return self._query().count()
 
     def join(self, *props, **kwargs):
-        return self.query().join(*props, **kwargs)
+        return self._query().join(*props, **kwargs)
 
     def where(self, *criteria, **filters):
         conditions = _where(self.cls, *criteria, **filters)
@@ -335,7 +336,6 @@ class _QueryHelper(object):
         return self
 
 
-
 class ActiveRecordMixin(object):
     """Provides an extended query function with some Rails style candy,
     for db.Model classes defined for SQLAlchemy.
@@ -358,11 +358,11 @@ class ActiveRecordMixin(object):
     """
 
     #attributes protected from mass assignment
-    attr_protected = tuple()    
+    _attr_protected = tuple()
     #attributes accessible through mass assignments and also returned by to_json
-    attr_accessible = tuple()
+    _attr_accessible = tuple()
     # attributes protected from JSON serialization
-    attr_hidden = tuple()
+    _attr_hidden = tuple()
 
     def __init__(self, **params):
         for attr in params:
@@ -374,8 +374,9 @@ class ActiveRecordMixin(object):
 
     def assign_attributes(self, **params):
         for attr in params:
-            if attr in self.attr_protected: continue
-            if not self.attr_accessible or attr in self.attr_accessible:
+            if attr in self._attr_protected:
+                continue
+            if not self._attr_accessible or attr in self._attr_accessible:
                 if hasattr(self, attr):
                     setattr(self, attr, params[attr])
         return self
@@ -391,13 +392,13 @@ class ActiveRecordMixin(object):
 
     def to_dict(self, *fields, **props):
         return _model_dict(self, *fields, **props)
-    
+
     @classmethod
     def create(cls, **kw):
         return cls(**kw).save()
 
     @classmethod
-    def find(cls,ident):
+    def find(cls, ident):
         return cls.query.get(ident)
 
     @classmethod

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from flask.globals import current_app as app
-from flask import g, url_for, get_flashed_messages
+from flask import url_for, get_flashed_messages
 from jinja2.utils import Markup
 
 __all__ = [
@@ -13,6 +13,7 @@ __all__ = [
     'script_tag'
 ]
 
+
 def static(filename):
     folder = app.config.get('STATIC_FOLDER', 'static')
     return url_for(folder, filename=filename, _external=True)
@@ -22,7 +23,7 @@ def get_flash(category=None, sep='\n'):
     if not category:
         return sep.join(get_flashed_messages())
     messages = get_flashed_messages(with_categories=True)
-    return sep.join([m for k,m in messages if k == category])
+    return sep.join([m for k, m in messages if k == category])
 
 
 def link_to(text, endpoint, **kwargs):
@@ -31,7 +32,6 @@ def link_to(text, endpoint, **kwargs):
         endpoint = url
     except:
         pass
-    
     kwargs["href"] = endpoint
     return Markup("<a %s>%s</a>" % (_format_attr(**kwargs), text))
 
@@ -51,7 +51,7 @@ def style_tag(filename, **kwargs):
     if filename.startswith('/'):
         filename = ''.join(filename[1:])
     else:
-        filename = 'css/' +  filename
+        filename = 'css/' + filename
 
     if not filename.endswith('.css'):
         filename += '.css'
@@ -59,9 +59,8 @@ def style_tag(filename, **kwargs):
     kwargs["rel"] = "stylesheet"
     kwargs["type"] = "text/css"
     kwargs["href"] = static(filename)
-    
+
     return Markup("<link %s/>" % _format_attr(**kwargs))
-    
 
 
 def script_tag(filename, **kwargs):
@@ -69,13 +68,13 @@ def script_tag(filename, **kwargs):
     if filename.startswith('/'):
         filename = ''.join(filename[1:])
     else:
-        filename = 'js/' +  filename
+        filename = 'js/' + filename
     if not filename.endswith('.js'):
         filename += '.js'
-    
+
     kwargs['src'] = static(filename)
     kwargs['type'] = "text/javascript"
-    
+
     return Markup("<script %s></script>" % _format_attr(**kwargs))
 
 
@@ -84,8 +83,7 @@ def image_tag(filename, **kwargs):
     if filename.startswith('/'):
         filename = ''.join(filename[1:])
     else:
-        filename = 'img/' +  filename
-        
+        filename = 'images/' + filename
     kwargs['src'] = static(filename)
     return Markup("<img %s>" % _format_attr(**kwargs))
 

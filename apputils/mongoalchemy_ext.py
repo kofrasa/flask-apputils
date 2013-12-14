@@ -12,12 +12,12 @@ def _mongo_serialize(value):
     
     :param `value` 
     """
-    if value is None or isinstance(value, (int,long,float,basestring,bool)):
+    if value is None or isinstance(value, (int, long, float, basestring, bool)):
         return value
-    elif isinstance(value, (list,tuple,set)):
+    elif isinstance(value, (list, tuple, set)):
         return [_mongo_serialize(v) for v in value]
     elif isinstance(value, dict):
-        for k,v in value.items():
+        for k, v in value.items():
             value[k] = _mongo_serialize(v)
         return value
     # change dates to isoformat
@@ -28,9 +28,9 @@ def _mongo_serialize(value):
         return _mongo_dict(value)
     else:
         return unicode(value)
-    
 
-def _mongo_dict(doc,*fields,**props):
+
+def _mongo_dict(doc, *fields, **props):
     """Returns a JSON serializable `dict` representation of the given document(s)
     
     :param `doc` mongo document or list of mongo documents
@@ -39,12 +39,12 @@ def _mongo_dict(doc,*fields,**props):
     """
     if not doc:
         return None
-    
+
     result = []
-    
-    fields = list(fields)    
+
+    fields = list(fields)
     # handle aliases    
-    alias = {'mongo_id':'id'}
+    alias = {'mongo_id': 'id'}
     temp_fields = fields[:]
     fields = []
     for k in temp_fields:
@@ -52,47 +52,45 @@ def _mongo_dict(doc,*fields,**props):
             alias[k[0]] = k[1]
             k = k[0]
         fields.append(k)
-        
+
     # do this ONLY if fields are given
-    if fields: 
+    if fields:
         fields.append('id')
         fields = set(fields) - set(['mongo_id'])
-    
+
     # pop of meta information
     _overwrite = props.pop('_overwrite', None)
     _exclude = props.pop('_exclude', [])
     if isinstance(_exclude, basestring):
         _exclude = [e.strip() for e in _exclude.split(',')]
-    
+
     many = not isinstance(doc, Document)
     if not many:
         doc = [doc]
-    
-    
+
     for d in doc:
         # select columns specified, or all if none
         fields = fields or d.get_fields()
         val = {}
         for k in fields:
-            if k in _exclude: continue
-            if hasattr(d,k):
+            if k in _exclude:
+                continue
+            if hasattr(d, k):
                 v = _mongo_serialize(getattr(d, k))
-                val[alias.get(k,k)] = v
-    
+                val[alias.get(k, k)] = v
         # add extra properties
         for k in props:
-            val[k] = _mongo_serialize(props[k])     
-        result.append(val)            
+            val[k] = _mongo_serialize(props[k])
+        result.append(val)
     return result[0] if not many else result
 
 
 class _QueryHelper(object):
-
     def __init__(self, cls):
         self.cls = cls
         self.fields = []
         self.filters = []
-    
+
     @property
     def query(self):
         q = self.cls.query
@@ -112,30 +110,30 @@ class _QueryHelper(object):
         return self.query.one()
 
     def where(self, *criteria, **filters):
-        doc_fields = self.cls.get_fields()        
+        doc_fields = self.cls.get_fields()
         criteria = list(criteria) if criteria else []
-        
+
         if 'id' in filters:
             filters['mongo_id'] = filters.pop('id')
 
         for attr in filters:
             if attr not in doc_fields or filters[attr] is None:
                 continue
-            
+
             value = filters[attr]
             if isinstance(value, tuple):
                 # ensure only two values in tuple
                 lower, upper = min(value), max(value)
                 # generate BETWEEN statement         
-                criteria.append(getattr(self.cls,attr) >= lower)
-                criteria.append(getattr(self.cls,attr) <= upper)
-            elif isinstance(value, (list,set)):
+                criteria.append(getattr(self.cls, attr) >= lower)
+                criteria.append(getattr(self.cls, attr) <= upper)
+            elif isinstance(value, (list, set)):
                 # generate IN statement
-                criteria.append(getattr(self.cls,attr).in_(*list(value)))
+                criteria.append(getattr(self.cls, attr).in_(*list(value)))
             else:
                 # generate = statement
-                criteria.append(getattr(self.cls,attr) == value)
-            
+                criteria.append(getattr(self.cls, attr) == value)
+
         self.filters.extend(criteria)
         return self
 
@@ -156,21 +154,22 @@ class ActiveDocument(object):
     #attributes accessible through mass assignments
     _attr_accessible = tuple()
 
-
     def __repr__(self):
         return json.dumps(self.to_dict())
-    
+
     def __delattr__(self, field):
-        q = self.__class__.query.filter(self.__class__.mongo_id==self.mongo_id)
+        q = self.__class__.query.filter(self.__class__.mongo_id == self.mongo_id)
         ex = UpdateExpression(q)
-        ex.unset(getattr(self.__class__,field))
+        ex.unset(getattr(self.__class__, field))
         ex.execute()
 
-    def assign_attributes(self, **params):        
+    def assign_attributes(self, **params):
         doc_fields = self.get_fields()
         for attr in params:
-            if params[attr] is None: continue
-            if attr in self._attr_protected: continue
+            if params[attr] is None:
+                continue
+            if attr in self._attr_protected:
+                continue
             if attr in self._attr_accessible or not self._attr_accessible:
                 if attr in doc_fields:
                     setattr(self, attr, params[attr])
@@ -181,12 +180,11 @@ class ActiveDocument(object):
         return self
 
     def to_dict(self, *fields, **props):
-        return _mongo_dict(self,*fields,**props)
+        return _mongo_dict(self, *fields, **props)
 
-    
     @classmethod
-    def create(cls,**params):
-        for k,v in params.items():
+    def create(cls, **params):
+        for k, v in params.items():
             if v is None:
                 params.pop(k)
         obj = cls(**params)
@@ -194,7 +192,7 @@ class ActiveDocument(object):
         return obj
 
     @classmethod
-    def find(cls,ident):
+    def find(cls, ident):
         return cls.query.get(ident)
 
     @classmethod
