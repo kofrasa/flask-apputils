@@ -5,7 +5,7 @@ from flask import url_for, get_flashed_messages
 from jinja2.utils import Markup
 
 __all__ = [
-    'static',
+    'static_file',
     'get_flash',
     'link_to',
     'image_tag',
@@ -14,9 +14,8 @@ __all__ = [
 ]
 
 
-def static(filename):
-    folder = app.config.get('STATIC_FOLDER', 'static')
-    return url_for(folder, filename=filename, _external=True)
+def static_file(filename):
+    return url_for(app.config.get('STATIC_FOLDER') or 'static', filename=filename, _external=True)
 
 
 def get_flash(category=None, sep='\n'):
@@ -58,7 +57,7 @@ def style_tag(filename, **kwargs):
 
     kwargs["rel"] = "stylesheet"
     kwargs["type"] = "text/css"
-    kwargs["href"] = static(filename)
+    kwargs["href"] = static_file(filename)
 
     return Markup("<link %s/>" % _format_attr(**kwargs))
 
@@ -72,7 +71,7 @@ def script_tag(filename, **kwargs):
     if not filename.endswith('.js'):
         filename += '.js'
 
-    kwargs['src'] = static(filename)
+    kwargs['src'] = static_file(filename)
     kwargs['type'] = "text/javascript"
 
     return Markup("<script %s></script>" % _format_attr(**kwargs))
@@ -84,7 +83,7 @@ def image_tag(filename, **kwargs):
         filename = ''.join(filename[1:])
     else:
         filename = 'images/' + filename
-    kwargs['src'] = static(filename)
+    kwargs['src'] = static_file(filename)
     return Markup("<img %s>" % _format_attr(**kwargs))
 
 
