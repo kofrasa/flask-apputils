@@ -2,9 +2,9 @@
 
 import json
 from functools import wraps
-
-# use your favorite template here
+from flask import redirect, session, request, g
 from flask.templating import render_template
+
 
 def after_this_request(f):
     """Decorator for functions to run after request has been processed"""
@@ -15,21 +15,40 @@ def after_this_request(f):
     return f
 
 
-def templated(template=None):
+def templated(*template):
     def decorator(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
-            template_name = template
+            template_name = '/'.join(template)
             if template_name is None:
+                # get template from templates directory
                 template_name = request.endpoint.replace('.', '/')
             ctx = f(*args, **kwargs)
             if ctx is None:
                 ctx = {}
             elif not isinstance(ctx, dict):
                 return ctx
-            return render_template(template_name, **ctx)
+            return render_template(template_name + '.html', **ctx)
         return wrapper
     return decorator
+
+
+def with_request(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        from flask.globals import request
+        if request.method in ['POST', 'PUT', 'PATCH']:
+            try:
+                data = json.loads(request.data)
+                assert isinstance(data, dict)
+            except Exception, e:
+                data = dict(request.form.items())
+        else:
+            data = request.args
+        if isinstance(data, dict):
+            kwargs.update(data)
+        return f(*args, **kwargs)
+    return wrapper
 
 
 def ssl_required(f):

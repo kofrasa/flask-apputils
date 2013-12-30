@@ -40,7 +40,7 @@ def any_of(value, options):
     def wrapper(message=None):
         if value is not None and value not in options:
             if message is None:
-                message = "Must be any of: %r." % values
+                message = "Must be any of: %r." % value
             raise ValueError(message)
         return value
     return wrapper
@@ -50,7 +50,7 @@ def none_of(value, options):
     def wrapper(message=None):
         if value is not None and value in options:
             if message is None:
-                message = "Cannot be any of: %r" % values
+                message = "Cannot be any of: %r" % value
             raise ValueError(message)
         return value
     return wrapper

@@ -10,7 +10,7 @@ from mongoalchemy.update_expression import UpdateExpression
 def _mongo_serialize(value):
     """Returns a JSON serializable python type of the given value
     
-    :param `value` 
+    :param value: A document or native type value
     """
     if value is None or isinstance(value, (int, long, float, basestring, bool)):
         return value
@@ -25,17 +25,17 @@ def _mongo_serialize(value):
         value = value.replace(microsecond=0)
         return value.isoformat()
     elif isinstance(value, Document):
-        return _mongo_dict(value)
+        return _model_to_dict(value)
     else:
         return unicode(value)
 
 
-def _mongo_dict(doc, *fields, **props):
+def _model_to_dict(doc, *fields, **props):
     """Returns a JSON serializable `dict` representation of the given document(s)
     
-    :param `doc` mongo document or list of mongo documents
-    :param `*fields` fields to select from the document
-    :param `**props` extra properties to attach to JSON object
+    :param doc: mongo document or list of mongo documents
+    :param \*fields: fields to select from the document
+    :param \**props: extra properties to attach to JSON object
     """
     if not doc:
         return None
@@ -180,7 +180,7 @@ class ActiveDocument(object):
         return self
 
     def to_dict(self, *fields, **props):
-        return _mongo_dict(self, *fields, **props)
+        return _model_to_dict(self, *fields, **props)
 
     @classmethod
     def create(cls, **params):
