@@ -12,7 +12,11 @@ __all__ = [
     'link_to',
     'image_tag',
     'style_tag',
-    'script_tag'
+    'script_tag',
+    'LazyView',
+    'create_router',
+    'APIBlueprint',
+    'TemplateBlueprint'
 ]
 
 

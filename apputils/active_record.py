@@ -357,9 +357,10 @@ class ActiveRecordMixin(object):
             self.query.session.commit()
         return self
 
-    def delete(self):
+    def delete(self, commit=False):
         self.query.session.delete(self)
-        self.query.session.commit()
+        if commit:
+            self.query.session.commit()
         return self
 
     def to_dict(self, *fields, **props):
