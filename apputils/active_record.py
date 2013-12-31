@@ -349,7 +349,7 @@ class ActiveRecordMixin(object):
 
     def update_attributes(self, **params):
         self.assign_attributes(**params)
-        return self.save()
+        return self.save(commit=True)
 
     def save(self, commit=False):
         self.query.session.add(self)
