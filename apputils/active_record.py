@@ -368,7 +368,7 @@ class ActiveRecordMixin(object):
 
     @classmethod
     def create(cls, **kw):
-        return cls(**kw).save()
+        return cls(**kw).save(commit=True)
 
     @classmethod
     def find(cls, ident):
