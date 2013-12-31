@@ -7,7 +7,7 @@ from mongoalchemy.document import Document
 from mongoalchemy.update_expression import UpdateExpression
 
 
-def _mongo_serialize(value):
+def json_serialize(value):
     """Returns a JSON serializable python type of the given value
     
     :param value: A document or native type value
@@ -15,10 +15,10 @@ def _mongo_serialize(value):
     if value is None or isinstance(value, (int, long, float, basestring, bool)):
         return value
     elif isinstance(value, (list, tuple, set)):
-        return [_mongo_serialize(v) for v in value]
+        return [json_serialize(v) for v in value]
     elif isinstance(value, dict):
         for k, v in value.items():
-            value[k] = _mongo_serialize(v)
+            value[k] = json_serialize(v)
         return value
     # change dates to isoformat
     elif isinstance(value, (dt.time, dt.date, dt.datetime)):
@@ -76,11 +76,11 @@ def _model_to_dict(doc, *fields, **props):
             if k in _exclude:
                 continue
             if hasattr(d, k):
-                v = _mongo_serialize(getattr(d, k))
+                v = json_serialize(getattr(d, k))
                 val[alias.get(k, k)] = v
         # add extra properties
         for k in props:
-            val[k] = _mongo_serialize(props[k])
+            val[k] = json_serialize(props[k])
         result.append(val)
     return result[0] if not many else result
 

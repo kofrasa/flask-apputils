@@ -90,7 +90,7 @@ def _model_to_dict(models, *fields, **props):
                 continue
             v = getattr(model, k)
             # change dates to human readable format
-            data[k] = _model_serialize(v)
+            data[k] = json_serialize(v)
 
         # handle relationships
         for k in related_map:
@@ -111,7 +111,7 @@ def _model_to_dict(models, *fields, **props):
     return result
 
 
-def _model_serialize(value):
+def json_serialize(value):
     """Returns a JSON serializable python type of the given value
     
     :param value:
@@ -119,10 +119,10 @@ def _model_serialize(value):
     if value is None or isinstance(value, (int, long, float, basestring, bool)):
         return value
     elif isinstance(value, (list, tuple, set)):
-        return [_model_serialize(v) for v in value]
+        return [json_serialize(v) for v in value]
     elif isinstance(value, dict):
         for k, v in value.items():
-            value[k] = _model_serialize(v)
+            value[k] = json_serialize(v)
         return value
     # change dates to iso format
     elif isinstance(value, (dt.time, dt.date, dt.datetime)):
