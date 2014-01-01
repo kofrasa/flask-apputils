@@ -281,6 +281,9 @@ class _QueryHelper(object):
     def count(self):
         return self._query().count()
 
+    def delete(self):
+        return self._query().delete()
+
     def join(self, *props, **kwargs):
         return self._query().join(*props, **kwargs)
 
