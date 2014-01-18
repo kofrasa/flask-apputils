@@ -2,7 +2,7 @@
 
 import json
 from functools import wraps
-from flask import redirect, session, request, g
+from flask import request
 from flask.templating import render_template
 
 
@@ -33,7 +33,7 @@ def templated(*template):
     return decorator
 
 
-def with_request(f):
+def from_json_request(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         from flask.globals import request
@@ -77,7 +77,7 @@ def as_json(f):
 
 
 def cached(app, timeout=5 * 60, key='view/%s'):
-    '''http://flask.pocoo.org/docs/patterns/viewdecorators/#caching-decorator'''
+    """http://flask.pocoo.org/docs/patterns/viewdecorators/#caching-decorator"""
     def decorator(f):
         @wraps(f)
         def wrapper(*args, **kwargs):

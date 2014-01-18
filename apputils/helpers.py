@@ -54,8 +54,8 @@ class APIBlueprint(Blueprint):
     """Blueprint which serialized response to JSON and also inject request parameters as keyword arguments
     """
     def add_url_rule(self, rule, endpoint=None, view_func=None, **options):
-        from .decorators import as_json, with_request
-        view_func = as_json(with_request(view_func))
+        from .decorators import as_json, from_json_request
+        view_func = as_json(from_json_request(view_func))
         return super(APIBlueprint, self).add_url_rule(rule, endpoint, view_func, **options)
 
 

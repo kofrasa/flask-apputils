@@ -297,8 +297,8 @@ class _QueryHelper(object):
         self.options.extend(options)
         return self
 
-    def order_by(self, *criteria):
-        self.order_by.extend(criteria)
+    def order_by(self, *fields):
+        self.order_by.extend(list(fields))
         return self
 
     def group_by(self, *criteria):

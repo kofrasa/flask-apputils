@@ -101,7 +101,7 @@ _mime_types = {
 }
 
 
-def get_mime_types(extension=None):
+def get_mimes(extension=None):
     """Returns the mime_types for the given extension"""
     return _mime_types.get(extension) if extension else None
 

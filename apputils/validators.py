@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# value validation routines from wtforms.
+import re
 
 EMAIL_PATTERN = "^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$"
 
@@ -20,7 +20,8 @@ def email(value):
 def length(value, min=1, max=None):
     assert min or max, 'No bounds specified'
     assert (not max or min <= max) or \
-            (not max or max > 0) and min > 0, "Invalid bounds specified"
+        (not max or max > 0) and min > 0, "Invalid bounds specified"
+
     def wrapper(message=None):
         if value is not None:
             assert isinstance(value, basestring), "Invalid value type"
@@ -92,6 +93,7 @@ def range(value, min=None, max=None):
         are provided depending on the existence of min and max.
     """
     assert min or max, "Invalid bounds specified"
+
     def wrapper(message=None):
         if value is not None:
             if min is not None and value < min:
@@ -104,8 +106,6 @@ def range(value, min=None, max=None):
         return value
     return wrapper
 
-
-import re
 
 def regexp(value, pattern):
     def wrapper(message="Invalid format"):
