@@ -248,7 +248,7 @@ def _where(model, *criteria, **filters):
 
 class _QueryHelper(object):
     def __init__(self, model):
-        self.cls = model
+        self._model_cls = model
         self._options = []
         self._filters = []
         self._order_by = []
@@ -256,7 +256,7 @@ class _QueryHelper(object):
         self._having = None
 
     def _query(self):
-        q = self.cls.query
+        q = self._model_cls.query
         if self._options:
             q = q.options(*self._options)
         if self._filters:
@@ -288,12 +288,12 @@ class _QueryHelper(object):
         return self._query().join(*props, **kwargs)
 
     def where(self, *criteria, **filters):
-        conditions = _where(self.cls, *criteria, **filters)
+        conditions = _where(self._model_cls, *criteria, **filters)
         self._filters.extend(conditions)
         return self
 
     def select(self, *fields):
-        options = _select(self.cls, *fields)
+        options = _select(self._model_cls, *fields)
         self._options.extend(options)
         return self
 
