@@ -249,24 +249,24 @@ def _where(model, *criteria, **filters):
 class _QueryHelper(object):
     def __init__(self, model):
         self.cls = model
-        self.options = []
-        self.filters = []
-        self.order_by = []
-        self.group_by = []
-        self.having = None
+        self._options = []
+        self._filters = []
+        self._order_by = []
+        self._group_by = []
+        self._having = None
 
     def _query(self):
         q = self.cls.query
-        if self.options:
-            q = q.options(*self.options)
-        if self.filters:
-            q = q.filter(*self.filters)
-        if self.order_by:
-            q = q.order_by(*self.order_by)
-        if self.group_by:
-            q = q.group_by(*self.group_by)
-            if self.having:
-                q = q.having(self.having)
+        if self._options:
+            q = q.options(*self._options)
+        if self._filters:
+            q = q.filter(*self._filters)
+        if self._order_by:
+            q = q.order_by(*self._order_by)
+        if self._group_by:
+            q = q.group_by(*self._group_by)
+            if self._having:
+                q = q.having(self._having)
         return q
 
     def all(self):
@@ -289,24 +289,24 @@ class _QueryHelper(object):
 
     def where(self, *criteria, **filters):
         conditions = _where(self.cls, *criteria, **filters)
-        self.filters.extend(conditions)
+        self._filters.extend(conditions)
         return self
 
     def select(self, *fields):
         options = _select(self.cls, *fields)
-        self.options.extend(options)
+        self._options.extend(options)
         return self
 
     def order_by(self, *fields):
-        self.order_by.extend(list(fields))
+        self._order_by.extend(list(fields))
         return self
 
     def group_by(self, *criteria):
-        self.group_by.extend(criteria)
+        self._group_by.extend(criteria)
         return self
 
     def having(self, criterion):
-        self.having = criterion
+        self._having = criterion
         return self
 
 
