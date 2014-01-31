@@ -57,13 +57,13 @@ def _model_to_dict(models, *fields, **props):
 
     # select columns given or all if non was specified
     model_attr = set(_get_columns(models[0]))
-    if fields:
-        model_attr = model_attr & set(fields)
-    else:
-        fields = model_attr
-    model_attr = model_attr - set(_exclude)
+    if not model_attr & set(fields):
+        fields = model_attr | set(fields)
 
+    # correctly filter relation attributes and column attributes
     related_attr = set(fields) - model_attr
+    model_attr = set(fields) - (set(_exclude) | related_attr)
+
     # check if there are relationships
     related_fields = _get_relations(models[0]).keys()
     related_map = {}
@@ -82,6 +82,9 @@ def _model_to_dict(models, *fields, **props):
     if not model_attr and not related_map:
         return {}
 
+    for key in _primary_key_names(models[0]):
+        model_attr.add(key)
+
     for model in models:
         data = {}
         # handle column attributes
@@ -98,7 +101,7 @@ def _model_to_dict(models, *fields, **props):
             fields = related_map[k]
             data[k] = _model_to_dict(val, *fields)
 
-            # add extra properties
+        # add extra properties
         for k in props.keys():
             if k not in data:
                 data[k] = props[k]
