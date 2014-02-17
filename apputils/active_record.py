@@ -38,13 +38,21 @@ def _get_relations(model):
 
 
 def _model_to_dict(models, *fields, **props):
-    """Converts an SQL model object to JSON dict
+    """Converts an SQLAlchemy model object to JSON dict
     """
     result = []
     fields = list(fields)
+
     is_many = isinstance(models, list)
+
+    # terminate early if there is nothing to work on
+    if not models:
+        return [] if is_many else {}
+
     if not is_many:
         models = [models]
+
+    assert isinstance(models[0], ActiveRecordMixin), "Invalid ActiveRecord object"
 
     if fields and len(fields) == 1:
         fields = [s.strip() for s in fields[0].split(',')]
@@ -344,17 +352,21 @@ class ActiveRecordMixin(object):
     def __repr__(self):
         return json.dumps(self.to_dict())
 
-    def assign_attributes(self, **params):
+    def assign_attributes(self, *args, **params):
+        sanitize = True
+        if args and isinstance(args[0], dict):
+            sanitize = args[0].get('sanitize', sanitize)
+
         for attr in params:
-            if attr in self._attr_protected:
+            if sanitize and attr in self._attr_protected:
                 continue
-            if not self._attr_accessible or attr in self._attr_accessible:
-                if hasattr(self, attr):
-                    setattr(self, attr, params[attr])
+            if hasattr(self, attr) and (not sanitize or not self._attr_accessible or attr in self._attr_accessible):
+                setattr(self, attr, params[attr])
+
         return self
 
     def update_attributes(self, **params):
-        self.assign_attributes(**params)
+        self.assign_attributes({'sanitize': True}, **params)
         return self.save(commit=True)
 
     def save(self, commit=False):
@@ -371,6 +383,10 @@ class ActiveRecordMixin(object):
 
     def to_dict(self, *fields, **props):
         return _model_to_dict(self, *fields, **props)
+
+    @classmethod
+    def get_columns(cls):
+        return _get_columns(cls).keys()
 
     @classmethod
     def create(cls, **kw):
