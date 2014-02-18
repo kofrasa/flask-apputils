@@ -137,7 +137,8 @@ def json_serialize(value):
         return value
     # change dates to iso format
     elif isinstance(value, (dt.time, dt.date, dt.datetime)):
-        value = value.replace(microsecond=0)
+        if hasattr(value, 'microsecond'):
+            value = value.replace(microsecond=0)
         return value.isoformat()
     elif isinstance(value, ActiveRecordMixin):
         return _model_to_dict(value)
