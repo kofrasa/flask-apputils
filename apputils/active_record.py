@@ -358,7 +358,9 @@ class ActiveRecordMixin(object):
         if args and isinstance(args[0], dict):
             sanitize = args[0].get('sanitize', sanitize)
 
-        for attr in params:
+        for attr in self.get_columns():
+            if attr not in params:
+                continue
             if sanitize and attr in self._attr_protected:
                 continue
             if hasattr(self, attr) and (not sanitize or not self._attr_accessible or attr in self._attr_accessible):
