@@ -33,7 +33,7 @@ def templated(*template):
     return decorator
 
 
-def from_json_request(f):
+def inject_request_params(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         from flask.globals import request
@@ -44,7 +44,9 @@ def from_json_request(f):
             except Exception, e:
                 data = dict(request.form.items())
         else:
-            data = request.args
+            data = {}
+            for key in request.args:
+                data[key] = request.args.get(key)
         if isinstance(data, dict):
             kwargs.update(data)
         return f(*args, **kwargs)

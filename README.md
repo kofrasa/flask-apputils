@@ -21,3 +21,4 @@ Flask extensions. The helpers.py module however has dependencies on decorators.p
 Just grab what u need for own use :)
 
 More documentation to come later.
+
