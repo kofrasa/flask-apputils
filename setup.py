@@ -26,7 +26,7 @@ setup(
     zip_safe=False,
     platforms='any',
     install_requires=['Flask>=0.8'],
-    test_suite='test',
+    test_suite='tests',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Web Environment',

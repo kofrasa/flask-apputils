@@ -83,7 +83,6 @@ def cached(app, timeout=5 * 60, key='view/%s'):
     def decorator(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
-            from flask import current_app as app
             cache_key = key % request.path
             rv = app.cache.get(cache_key)
             if rv is not None:
