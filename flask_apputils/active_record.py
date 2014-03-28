@@ -111,8 +111,7 @@ def _model_to_dict(models, *fields, **props):
 
         # add extra properties
         for k in props.keys():
-            if k not in data:
-                data[k] = props[k]
+            data[k] = props[k]
 
         # add to results
         result.append(data)
