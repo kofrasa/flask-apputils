@@ -351,7 +351,10 @@ class ActiveRecordMixin(object):
     _attr_hidden = tuple()
 
     def __repr__(self):
-        return json.dumps(self.to_dict())
+        return "%s(%s)" % (
+            self.__class__.__name__,
+            ', '.join(["%s=%r" % (c, getattr(self, c)) for c in self.__class__.get_columns()])
+        )
 
     def assign_attributes(self, *args, **params):
         sanitize = True
