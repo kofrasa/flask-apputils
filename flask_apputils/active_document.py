@@ -184,9 +184,6 @@ class ActiveDocument(object):
 
     @classmethod
     def create(cls, **params):
-        for k, v in params.items():
-            if v is None:
-                params.pop(k)
         obj = cls(**params)
         obj.save()
         return obj
