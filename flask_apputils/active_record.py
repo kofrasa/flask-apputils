@@ -242,7 +242,7 @@ def _where(model, *criteria, **filters):
 
             if len(value) == 1:
                 # generate = statement
-                value = getattr(model, attr) == value.pop()
+                value = getattr(model, attr) == value[0]
             elif isinstance(value, tuple):
                 # generate BETWEEN statement
                 lower = min(value)
