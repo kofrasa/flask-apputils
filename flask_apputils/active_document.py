@@ -3,6 +3,7 @@
 
 import json
 import datetime as dt
+import calendar
 from mongoalchemy.document import Document
 from mongoalchemy.update_expression import UpdateExpression
 
@@ -20,10 +21,9 @@ def json_serialize(value):
         for k, v in value.items():
             value[k] = json_serialize(v)
         return value
-    # change dates to isoformat
-    elif isinstance(value, (dt.time, dt.date, dt.datetime)):
-        value = value.replace(microsecond=0)
-        return value.isoformat()
+    # change datetime to unix timestamp
+    elif isinstance(value, dt.datetime):
+        return calendar.timegm(value.utctimetuple())
     elif isinstance(value, Document):
         return _model_to_dict(value)
     else:

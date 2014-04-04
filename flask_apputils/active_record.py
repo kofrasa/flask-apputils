@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-import json
 import datetime as dt
+import calendar
 from sqlalchemy.orm import ColumnProperty, RelationshipProperty, object_mapper, class_mapper, defer, lazyload
 
 
@@ -134,11 +134,9 @@ def json_serialize(value):
         for k, v in value.items():
             value[k] = json_serialize(v)
         return value
-    # change dates to iso format
-    elif isinstance(value, (dt.time, dt.date, dt.datetime)):
-        if hasattr(value, 'microsecond'):
-            value = value.replace(microsecond=0)
-        return value.isoformat()
+    # change dates to unix timestamp
+    elif isinstance(value, dt.datetime):
+        return calendar.timegm(value.utctimetuple())
     elif isinstance(value, ActiveRecordMixin):
         return _model_to_dict(value)
     else:
@@ -187,16 +185,6 @@ def _where(model, *criteria, **filters):
     conditions = []
     conditions.extend(criteria)
 
-    # converts a date/time string to the corresponding python object
-    def _convert_dt(date_values, format_string):
-        results = []
-        for val in date_values:
-            if isinstance(value, basestring):
-                results.append(dt.datetime.strptime(val, format_string))
-            else:
-                results.append(val)
-        return tuple(results) if isinstance(date_values, tuple) else results
-
     # build criteria from filter
     if filters:
 
@@ -231,14 +219,6 @@ def _where(model, *criteria, **filters):
                 value = (lower, upper)
             elif not isinstance(value, list):
                 value = [value]
-
-            # format expression for datetime values
-            if prop.type.python_type == dt.datetime:
-                value = _convert_dt(value, "%Y-%m-%d %H:%M:%S")
-            elif prop.type.python_type == dt.date:
-                value = _convert_dt(value, "%Y-%m-%d")
-            elif prop.type.python_type == dt.time:
-                value = _convert_dt(value, "%H:%M:%S")
 
             if len(value) == 1:
                 # generate = statement
