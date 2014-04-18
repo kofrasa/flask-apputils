@@ -21,9 +21,9 @@ def json_serialize(value):
         for k, v in value.items():
             value[k] = json_serialize(v)
         return value
-    # change datetime to unix timestamp
-    elif isinstance(value, dt.datetime):
-        return calendar.timegm(value.utctimetuple())
+    # return date/time in isoformat
+    elif isinstance(value, (dt.datetime, dt.date, dt.time)):
+        return value.isoformat()
     elif isinstance(value, Document):
         return _model_to_dict(value)
     else:
