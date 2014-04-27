@@ -110,8 +110,10 @@ def _model_to_dict(models, *fields, **props):
             data[k] = _model_to_dict(val, *fields)
 
         # add extra properties
-        for k in props.keys():
+        for k in props:
             data[k] = props[k]
+            if callable(data[k]):
+                data[k] = data[k](model)
 
         # add to results
         result.append(data)

@@ -30,14 +30,14 @@ def json_serialize(value):
         return unicode(value)
 
 
-def _model_to_dict(doc, *fields, **props):
+def _model_to_dict(docs, *fields, **props):
     """Returns a JSON serializable `dict` representation of the given document(s)
     
-    :param doc: mongo document or list of mongo documents
+    :param docs: mongo document or list of mongo documents
     :param \*fields: fields to select from the document
     :param \**props: extra properties to attach to JSON object
     """
-    if not doc:
+    if not docs:
         return None
 
     result = []
@@ -64,24 +64,29 @@ def _model_to_dict(doc, *fields, **props):
     if isinstance(_exclude, basestring):
         _exclude = [e.strip() for e in _exclude.split(',')]
 
-    many = not isinstance(doc, Document)
+    many = not isinstance(docs, Document)
     if not many:
-        doc = [doc]
+        docs = [docs]
 
-    for d in doc:
+    for doc in docs:
         # select columns specified, or all if none
-        fields = fields or d.get_fields()
-        val = {}
+        fields = fields or doc.get_fields()
+        data = {}
         for k in fields:
             if k in _exclude:
                 continue
-            if hasattr(d, k):
-                v = json_serialize(getattr(d, k))
-                val[alias.get(k, k)] = v
+            if hasattr(doc, k):
+                v = json_serialize(getattr(doc, k))
+                data[alias.get(k, k)] = v
+
         # add extra properties
         for k in props:
-            val[k] = json_serialize(props[k])
-        result.append(val)
+            data[k] = props[k]
+            if callable(data[k]):
+                data[k] = data[k](doc)
+
+        result.append(data)
+
     return result[0] if not many else result
 
 
