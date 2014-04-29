@@ -217,10 +217,18 @@ def _where(model, *criteria, **filters):
 
             if isinstance(value, tuple):
                 # ensure only two values in tuple
+                if len(value) != 2:
+                    raise ValueError(
+                        "Expected tuple of size 2 generate BETWEEN expression for column '%s.%s'" % (
+                            model.__name__, attr))
                 lower, upper = min(value), max(value)
                 value = (lower, upper)
             elif not isinstance(value, list):
                 value = [value]
+            elif not value:
+                raise ValueError(
+                    "Expected non-empty list to generate IN expression for column '%s.%s'" % (
+                        model.__name__, attr))
 
             if len(value) == 1:
                 # generate = statement
@@ -250,8 +258,11 @@ class _QueryHelper(object):
 
     def _query(self):
         q = self._model_cls.query
-        if self._options:
-            q = q.options(*self._options)
+        if not self._options:
+            # force lazy loading of unselected relations
+            self.select()
+        q = q.options(*self._options)
+
         if self._filters:
             q = q.filter(*self._filters)
         if self._order_by:
