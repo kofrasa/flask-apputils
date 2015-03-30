@@ -1,7 +1,14 @@
 #!-*- coding: utf-8 -*-
+"""
+    flask_apputils.routing
+    ~~~~~~~~~~~~~~~~~~~~~~
+
+    Utilities for building routing handlers
+"""
+
 from werkzeug.utils import import_string, cached_property
 from flask.blueprints import Blueprint
-from .decorators import as_json, inject_request_params, with_template
+from .decorators import as_json, inject_request, templated
 
 
 class LazyView(object):
@@ -38,7 +45,7 @@ class APIBlueprint(Blueprint):
     """Blueprint which serialized response to JSON and also inject request parameters as keyword arguments
     """
     def add_url_rule(self, rule, endpoint=None, view_func=None, **options):
-        view_func = as_json(inject_request_params(view_func))
+        view_func = as_json(inject_request(view_func))
         return super(APIBlueprint, self).add_url_rule(rule, endpoint, view_func, **options)
 
 
@@ -47,7 +54,7 @@ class TemplateBlueprint(Blueprint):
     """
     def add_url_rule(self, rule, endpoint=None, view_func=None, **options):
         # wrap with template loader function
-        tpl_func = with_template(self.name, view_func.__name__)
+        tpl_func = templated('/'.join([self.name, view_func.__name__]))
         view_func = tpl_func(view_func)
         # endpoint = options.pop("endpoint", view_func.__name__)
         return super(TemplateBlueprint, self).add_url_rule(rule, endpoint, view_func, **options)

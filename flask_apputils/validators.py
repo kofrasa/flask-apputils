@@ -9,6 +9,7 @@ class ValidationError(ValueError):
     """
     Raised when a validator fails to validate its input.
     """
+
     def __init__(self, message='', *args, **kwargs):
         ValueError.__init__(self, message, *args, **kwargs)
 
@@ -20,7 +21,7 @@ def email(value):
 def length(value, min=1, max=None):
     assert min or max, 'No bounds specified'
     assert (not max or min <= max) or \
-        (not max or max > 0) and min > 0, "Invalid bounds specified"
+           (not max or max > 0) and min > 0, "Invalid bounds specified"
 
     def wrapper(message=None):
         if value is not None:
@@ -32,8 +33,9 @@ def length(value, min=1, max=None):
                 message = message or "Must be less than %(max)s characters"
             else:
                 message = message or "Must be between %(min)s and %(max)s characters"
-            raise ValidationError(message % dict(min=min,max=max))
+            raise ValidationError(message % dict(min=min, max=max))
         return value
+
     return wrapper
 
 
@@ -44,6 +46,7 @@ def any_of(value, options):
                 message = "Must be any of: %r." % value
             raise ValueError(message)
         return value
+
     return wrapper
 
 
@@ -54,6 +57,7 @@ def none_of(value, options):
                 message = "Cannot be any of: %r" % value
             raise ValueError(message)
         return value
+
     return wrapper
 
 
@@ -62,6 +66,7 @@ def required(value):
         if not value or isinstance(value, basestring) and not value.strip():
             raise ValueError(message)
         return value
+
     return wrapper
 
 
@@ -72,10 +77,11 @@ def equals(value, expected):
                 message = 'Must be equal to %s' % value
             raise ValidationError(message)
         return value
+
     return wrapper
 
 
-def range(value, min=None, max=None):
+def within(value, min=None, max=None):
     """
     Validates that a number is within a minimum and/or maximum value, inclusive.
     This will work with any comparable number type, such as floats and
@@ -102,8 +108,9 @@ def range(value, min=None, max=None):
                 message = message or "Must be less than %(max)s"
             else:
                 message = message or "Must be between %(min)s and %(max)s"
-            raise ValidationError(message % dict(min=min,max=max))
+            raise ValidationError(message % dict(min=min, max=max))
         return value
+
     return wrapper
 
 
@@ -112,4 +119,5 @@ def regexp(value, pattern):
         if value and not re.match(pattern, value):
             raise ValidationError(message)
         return value
+
     return wrapper

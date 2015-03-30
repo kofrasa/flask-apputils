@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+"""
+    flask_apputils.filters
+    ~~~~~~~~~~~~~~~~~~~~~~
+"""
 
 import datetime as dt
 import math

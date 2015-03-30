@@ -1,12 +1,9 @@
-#!/usr/bin/env python
-#-*- coding: utf-8 -*-
-__author__ = 'francis'
-
+# -*- coding: utf-8 -*-
 """
-Flask-AppUtils
---------------
+    Flask-AppUtils
+    ~~~~~~~~~~~~~~
 
-A collection of useful patterns and helpers for Flask applications
+    A collection of useful patterns and helpers for Flask applications
 """
 
 from setuptools import setup
@@ -23,7 +20,7 @@ setup(
     long_description=__doc__,
     packages=['flask_apputils'],
     include_package_data=True,
-    zip_safe=False,
+    zip_safe=True,
     platforms='any',
     install_requires=['Flask>=0.8'],
     test_suite='tests',

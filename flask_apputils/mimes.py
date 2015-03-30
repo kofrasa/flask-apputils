@@ -1,7 +1,11 @@
 #!/usr/bin/env python
+"""
+    flask_apputils.mimes
+    ~~~~~~~~~~~~~~~~~~~~
 
-# A collection of mime_types to help with parsing and correctly handling/sending content
-# based on their extensions.
+    A collection of mime_types to help with parsing and correctly handling/sending content
+    based on their extensions.
+"""
 
 __all__ = ['get_mimes', 'get_extensions']
 
