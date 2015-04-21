@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-    flask_apputils.helpers
-    ~~~~~~~~~~~~~~~~~~~~~~
+    flask_apputils.templating
+    ~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Template utilities to inject into the application context processor for rails-style template helpers
 """
 
-from flask.globals import current_app as app
+from flask.globals import current_app
 from flask import url_for, get_flashed_messages
 from jinja2.utils import Markup
 
@@ -20,9 +20,24 @@ __all__ = [
 ]
 
 
+def init_context_processor(app):
+    """Update the :class:`Flask` instance context processors
+
+    :param app: a Flask application instance
+    """
+    app.context_processor(lambda: {
+        'static_file': static_file,
+        'get_flask': get_flash,
+        'link_to': link_to,
+        'style_tag': style_tag,
+        'script_tag': script_tag,
+        'image_tag': image_tag,
+    })
+
+
 def static_file(filename):
     """Return a link to a file from the current app `STATIC_FOLDER`"""
-    return url_for(app.static_folder, filename=filename, _external=True)
+    return url_for(current_app.static_folder, filename=filename, _external=True)
 
 
 def get_flash(category=None, sep='\n'):

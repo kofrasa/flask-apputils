@@ -3,7 +3,7 @@
     flask_apputils.decorators
     ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    Collection of useful decorator patterns.
+    Useful decorator patterns
 """
 
 import json
@@ -23,11 +23,13 @@ def after_this_request(f):
     return f
 
 
-def templated(template=None):
+def with_template(template=None):
     """Load template and process with argument `dict` returned from handler.
     Will use a formatted endpoint name as template name if not provided.
 
-    See: http://flask.pocoo.org/docs/0.10/patterns/viewdecorators/#templating-decorator
+    See: example_
+
+    .. example: http://flask.pocoo.org/docs/0.10/patterns/viewdecorators/#templating-decorator
     """
 
     def decorator(f):
@@ -48,7 +50,7 @@ def templated(template=None):
     return decorator
 
 
-def inject_request(f):
+def with_request(f):
     """Injects request data into the wrapped handler as **kwargs parameters.
 
     For `GET` requests, the query parameters are injected.

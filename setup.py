@@ -4,6 +4,16 @@
     ~~~~~~~~~~~~~~
 
     A collection of useful patterns and helpers for Flask applications
+
+    install
+    -------
+    ::
+
+        $ pip install flask-apputils
+
+    See: Readme_
+
+    .. Readme: https://github.com/kofrasa/flask-apputils/blob/master/README.md
 """
 
 from setuptools import setup

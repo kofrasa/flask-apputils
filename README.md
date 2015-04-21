@@ -5,17 +5,15 @@ A collections of common utilities and patterns for Flask applications with usefu
 
 
 Install
-=======
+-------
 
-::
-
-    $ git clone https://github.com/kofrasa/flask-apputils
-    $ cd flask-apputils
-    $ python setup.py install
+```sh
+$ pip install flask-apputils
+```
     
 
 Modules
-=======
+-------
 
 * `decorators`
 * `filters`
@@ -27,7 +25,11 @@ Modules
 * `validators`
 
 
+Examples
+--------
+
+
 License
-=======
+-------
 MIT
 

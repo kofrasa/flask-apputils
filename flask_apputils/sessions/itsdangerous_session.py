@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+"""
+
+See: source_
+
+.. source: http://flask.pocoo.org/snippets/51
+"""
 
 
 from werkzeug.datastructures import CallbackDict
@@ -6,7 +12,6 @@ from flask.sessions import SessionInterface, SessionMixin
 from itsdangerous import URLSafeTimedSerializer, BadSignature
 
 
-#source: http://flask.pocoo.org/snippets/51/ by Armin Ronacher
 class ItsdangerousSession(CallbackDict, SessionMixin):
     def __init__(self, initial=None):
         def on_update(self):
