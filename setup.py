@@ -7,6 +7,7 @@ A collection of useful patterns and helpers for Flask applications
 install
 -------
 ::
+
     $ pip install flask-apputils
 
 
@@ -25,7 +26,7 @@ modules
 
 See: Readme_
 
-.. Readme: https://github.com/kofrasa/flask-apputils/blob/master/README.md
+.. _Readme: https://github.com/kofrasa/flask-apputils/blob/master/README.md
 """
 
 from setuptools import setup
@@ -33,7 +34,7 @@ from setuptools import setup
 
 setup(
     name='Flask-AppUtils',
-    version='0.1.1',
+    version='0.1.2',
     license='BSD',
     author='Francis Asante',
     author_email='kofrasa@gmail.com',
