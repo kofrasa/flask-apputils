@@ -1,32 +1,31 @@
 """
-    Flask-AppUtils
-    ~~~~~~~~~~~~~~
+Flask-AppUtils
+--------------
 
-    A collection of useful patterns and helpers for Flask applications
+A collection of useful patterns and helpers for Flask applications
 
-    install
-    -------
-    ::
-
-        $ pip install flask-apputils
-
-
-    modules
-    -------
-    - `decorators`
-    - `filters`
-    - `helpers`
-    - `routing`
-    - `middlewares`
-    - `mimes`
-    - `sessions.itdangerous_session`
-    - `sessions.redis_session`
-    - `validators`
+install
+-------
+::
+    $ pip install flask-apputils
 
 
-    See: Readme_
+modules
+-------
+- `decorators`
+- `filters`
+- `helpers`
+- `routing`
+- `middlewares`
+- `mimes`
+- `sessions.itdangerous_session`
+- `sessions.redis_session`
+- `validators`
 
-    .. Readme: https://github.com/kofrasa/flask-apputils/blob/master/README.md
+
+See: Readme_
+
+.. Readme: https://github.com/kofrasa/flask-apputils/blob/master/README.md
 """
 
 from setuptools import setup
