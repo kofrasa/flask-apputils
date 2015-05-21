@@ -1,8 +1,12 @@
-#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+    flask_apputils.validators
+    ~~~~~~~~~~~~~~~~~~~~~~~~~
+"""
 
 import re
 
-EMAIL_PATTERN = "^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$"
+_EMAIL_PATTERN = "^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$"
 
 
 class ValidationError(ValueError):
@@ -15,7 +19,7 @@ class ValidationError(ValueError):
 
 
 def email(value):
-    return regexp(value, EMAIL_PATTERN)("Invalid email address")
+    return regexp(value, _EMAIL_PATTERN)("Invalid email address")
 
 
 def length(value, min=1, max=None):
