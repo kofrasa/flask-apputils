@@ -5,7 +5,7 @@
 
     See: source_
 
-    .. source: http://flask.pocoo.org/snippets/75/
+    .. _source: http://flask.pocoo.org/snippets/75/
 """
 
 import pickle

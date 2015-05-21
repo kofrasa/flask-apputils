@@ -20,11 +20,11 @@ Modules
 * `decorators`
 * `filters`
 * `helpers`
+* `itsdangerous_session`
 * `routing`
 * `middlewares`
 * `mimes`
-* `sessions.itdangerous_session`
-* `sessions.redis_session`
+* `redis_session`
 * `validators`
 
 

@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-    itsdangerous_session
-    ~~~~~~~~~~~~~~~~~~~~
+    flask_apputils.itsdangerous_session
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     See: source_
 
-    .. source: http://flask.pocoo.org/snippets/51
+    .. _source: http://flask.pocoo.org/snippets/51
 """
 
 from werkzeug.datastructures import CallbackDict
