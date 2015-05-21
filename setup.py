@@ -11,6 +11,12 @@
 
         $ pip install flask-apputils
 
+
+    modules
+    -------
+    -
+
+
     See: Readme_
 
     .. Readme: https://github.com/kofrasa/flask-apputils/blob/master/README.md
@@ -22,7 +28,7 @@ from setuptools import setup
 setup(
     name='Flask-AppUtils',
     version='0.1',
-    license='MIT',
+    license='BSD',
     author='Francis Asante',
     author_email='kofrasa@gmail.com',
     url='http://github.com/kofrasa/flask-apputils',

@@ -3,7 +3,7 @@ Flask-AppUtils
 ==============
 A collections of common utilities and patterns for Flask applications.
 
-Includes some useful snippets from [flask.pocco.org](flask.pocoo.org/snippets)
+Includes useful snippets from [flask.pocco.org](http://flask.pocoo.org/snippets/)
 
 
 Install
@@ -23,12 +23,17 @@ Modules
 * `routing`
 * `middlewares`
 * `mimes`
-* `validators`
 * `sessions.itdangerous_session`
 * `sessions.redis_session`
+* `validators`
+
+
+Documentation
+-------------
+[Wiki] (https://github.com/kofrasa/flask-apputils/wiki)
 
 
 License
 -------
-MIT
+BSD
 
