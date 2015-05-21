@@ -1,13 +1,15 @@
 
 Flask-AppUtils
 ==============
-A collections of common utilities and patterns for Flask applications with useful snippets from [flask.pocco.org](flask.pocco.org)
+A collections of common utilities and patterns for Flask applications.
+
+Includes some useful snippets from [flask.pocco.org](flask.pocoo.org/snippets)
 
 
 Install
 -------
 
-```sh
+```
 $ pip install flask-apputils
 ```
     
@@ -21,12 +23,9 @@ Modules
 * `routing`
 * `middlewares`
 * `mimes`
-* `templating`
 * `validators`
-
-
-Examples
---------
+* `sessions.itdangerous_session`
+* `sessions.redis_session`
 
 
 License

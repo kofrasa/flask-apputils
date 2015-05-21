@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+"""
+    redis_session
+    ~~~~~~~~~~~~~
+
+    See: source_
+
+    .. source: http://flask.pocoo.org/snippets/75/
+"""
 
 import pickle
 from datetime import timedelta
@@ -9,10 +17,10 @@ from flask.sessions import SessionInterface, SessionMixin
 
 
 class RedisSession(CallbackDict, SessionMixin):
-
     def __init__(self, initial=None, sid=None, new=False):
         def on_update(self):
             self.modified = True
+
         CallbackDict.__init__(self, initial, on_update)
         self.sid = sid
         self.new = new
@@ -20,6 +28,11 @@ class RedisSession(CallbackDict, SessionMixin):
 
 
 class RedisSessionInterface(SessionInterface):
+    """
+    ..code ::
+        app = Flask(__name__)
+        app.session_interface = RedisSessionInterface()
+    """
     serializer = pickle
     session_class = RedisSession
 
@@ -29,10 +42,12 @@ class RedisSessionInterface(SessionInterface):
         self.redis = redis
         self.prefix = prefix
 
-    def generate_sid(self):
+    @staticmethod
+    def generate_sid():
         return str(uuid4())
 
-    def get_redis_expiration_time(self, app, session):
+    @staticmethod
+    def get_redis_expiration_time(app, session):
         if session.permanent:
             return app.permanent_session_lifetime
         return timedelta(days=1)

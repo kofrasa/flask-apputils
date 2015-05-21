@@ -1,3 +1,1 @@
-#!/usr/bin/env python
-#-*- coding: utf-8 -*-
-__author__ = 'francis'
+# -*- coding: utf-8 -*-

@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+    itsdangerous_session
+    ~~~~~~~~~~~~~~~~~~~~
 
-See: source_
+    See: source_
 
-.. source: http://flask.pocoo.org/snippets/51
+    .. source: http://flask.pocoo.org/snippets/51
 """
-
 
 from werkzeug.datastructures import CallbackDict
 from flask.sessions import SessionInterface, SessionMixin

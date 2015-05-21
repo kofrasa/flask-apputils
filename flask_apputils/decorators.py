@@ -3,14 +3,17 @@
     flask_apputils.decorators
     ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    Useful decorator patterns
+    Useful decorators to enhance route handlers
 """
 
 import json
+import re
 from functools import wraps
 from flask import request, redirect, Response, render_template, jsonify
-from werkzeug.exceptions import NotFound
 from .helpers import json_value
+
+
+_JSON_TYPE_RE = re.compile(r"^application/(.+\+)?json")
 
 
 def after_this_request(f):
@@ -23,9 +26,10 @@ def after_this_request(f):
     return f
 
 
-def with_template(template=None):
-    """Load template and process with argument `dict` returned from handler.
-    Will use a formatted endpoint name as template name if not provided.
+def templated(template=None, ext='html'):
+    """
+    Load and render a template with the result of the function.
+    Uses a formatted endpoint name as template name if none is provided.
 
     See: example_
 
@@ -37,7 +41,7 @@ def with_template(template=None):
         def wrapper(*args, **kwargs):
             template_name = template
             if template_name is None:
-                template_name = request.endpoint.replace('.', '/') + '.html'
+                template_name = request.endpoint.replace('.', '/') + '.' + ext
             ctx = f(*args, **kwargs)
             if ctx is None:
                 ctx = {}
@@ -50,80 +54,68 @@ def with_template(template=None):
     return decorator
 
 
-def with_request(f):
-    """Injects request data into the wrapped handler as **kwargs parameters.
-
-    For `GET` requests, the query parameters are injected.
-
-    For all HTTP request methods, form data is injected if using multipart/form-data else
-    the request body is assumed to be JSON and is deserialized and injected.
-
-    :param f: request handler
+def inject_request_params(f):
+    """
+    Inject request query parameters into the function as \**kwargs
+    :param f: function
+    :return:
     """
 
     @wraps(f)
     def wrapper(*args, **kwargs):
-        query = {}
+        data = {}
         for key in request.args:
-            query[key] = request.args.get(key)
-
-        if request.method in ['GET']:
-            data = query
-        else:
-            try:
-                data = json.loads(request.data)
-                assert isinstance(data, dict)
-            except Exception as e:
-                data = dict(request.form.items())
-
-        if isinstance(data, dict):
+            data[key] = request.args.get(key)
+        if data:
             kwargs.update(data)
+        return f(*args, **kwargs)
+
+    return wrapper
+
+
+def inject_request_body(f):
+    """
+    Inject request body into the function as \**kwargs for methods POST, PUT, or PATCH.
+    If the content-type is JSON, the body will be treated as JSON, otherwise as a form-data.
+
+    :param f: function
+    """
+
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        rx = _JSON_TYPE_RE.match(request.content_type)
+        data = None
+
+        if request.method in ['POST', 'PUT', 'PATCH']:
+            try:
+                if rx.group():
+                    data = json.loads(request.data)
+                    assert isinstance(data, dict)
+                else:
+                    data = dict(request.form.items())
+            except Exception as e:
+                print e
+
+            if isinstance(data, dict):
+                kwargs.update(data)
 
         return f(*args, **kwargs)
 
     return wrapper
 
 
-def inject_response(extra):
-    """Injects extra data into the response of the request handler
-
-    This works only if the response is a dictionary and is suitable for JSON APIs
-
-    :param extra:
-    :return: a decorator function
-    """
-
-    def decorator(f):
-        @wraps(f)
-        def wrapper(*args, **kwargs):
-            res = f(*args, **kwargs)
-            if res is None:
-                res = dict()
-            if isinstance(res, dict) and not set(extra.keys()) & set(res.keys()):
-                for key, value in extra.items():
-                    if callable(value):
-                        res[key] = value()
-                    else:
-                        res[key] = value
-            return res
-
-        return wrapper
-
-    return decorator
-
-
 def ssl_required(f):
-    """Force requests to be secured with SSL.
-    Must set the `USE_SSL` config parameter to `True`
+    """
+    Force requests to be secured with SSL. Must set the `SSL` config parameter to `True`
 
-    :param f: request handler
+    :param f: function
     """
 
     @wraps(f)
     def wrapper(*args, **kwargs):
         from flask import current_app as app
 
-        if app.config.get("USE_SSL"):
+        if app.config.get("SSL"):
             if request.is_secure:
                 return f(*args, **kwargs)
             else:
@@ -134,16 +126,21 @@ def ssl_required(f):
 
 
 def as_json(f):
-    """Serialize a response to JSON
+    """
+    Serialize a response to JSON.
 
-    :param f: request handler
+    Responses of type :class:`flask.wrappers.Response` are returned as is.
+    Responses of type :class:`dict` are serialized to JSON.
+    All other response types are serialized to JSON and returned in an object with key `data` such as: {'data': True}
+
+    :param f: function
     """
 
     @wraps(f)
     def wrapper(*args, **kwargs):
         response = f(*args, **kwargs)
         if response is None:
-            raise NotFound()
+            raise Exception("Cannot serialize None to JSON")
         if isinstance(response, Response):
             return response
         if not callable(response):
