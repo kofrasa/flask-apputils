@@ -5,6 +5,7 @@
 """
 
 from datetime import datetime, date, time
+from logging import LoggerAdapter
 from flask.globals import current_app
 from flask import url_for, get_flashed_messages
 from jinja2.utils import Markup
@@ -12,12 +13,16 @@ from jinja2.utils import Markup
 
 __all__ = [
     'get_flash',
+    'get_logger',
     'image_tag',
     'json_value',
     'link_to',
+    'parse_datetime',
+    'parse_date',
+    'parse_time',
+    'script_tag',
     'static_file',
-    'script_tag'
-    'style_tag',
+    'style_tag'
 ]
 
 
@@ -135,3 +140,59 @@ def _format_attr(**kwargs):
     for key, value in kwargs.items():
         attr.append("%s=\"%s\"" % (key, value))
     return " ".join(attr)
+
+
+class CustomAdapter(LoggerAdapter):
+    def process(self, msg, kwargs):
+        return '%s:\t%s' % (self.extra['tag'], msg), kwargs
+
+    def warn(self, msg, *args):
+        self.warning(msg, *args)
+
+
+def get_logger(tag):
+    """Create a custom logger adapter that tags logged messages for `current_app.logger`
+
+    :param tag: the tag string
+    :return:
+    """
+    return CustomAdapter(current_app.logger, {'tag': tag}) if tag else current_app.logger
+
+
+def parse_datetime(value):
+    """Parse the datetime string in ISO format to a datetime object
+
+    :param value: the datetime string
+    """
+    for fmt in ('%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S'):
+        try:
+            return datetime.strptime(value, fmt)
+        except:
+            pass
+    return None
+
+
+def parse_date(value):
+    """Parse the date string in ISO format to a date object
+
+    :param value: the date string
+    """
+    for fmt in ('%Y-%m-%d', '%Y%m%d'):
+        try:
+            return datetime.strptime(value, fmt).date()
+        except:
+            pass
+    return None
+
+
+def parse_time(value):
+    """Parse the time string
+
+    :param value: the time string
+    """
+    for fmt in ('%H:%M:%S', '%H%M%S'):
+        try:
+            return datetime.strptime(value, fmt).date()
+        except:
+            pass
+    return None
