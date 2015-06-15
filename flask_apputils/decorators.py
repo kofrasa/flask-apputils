@@ -6,14 +6,18 @@
     Useful decorators to enhance route handlers
 """
 
-import json
-import re
 from functools import wraps
 from flask import request, redirect, Response, render_template, jsonify
 from .helpers import json_value
 
-
-_JSON_TYPE_RE = re.compile(r"^application/(.+\+)?json")
+__all__ = (
+    'after_this_request',
+    'as_json',
+    'ssl_required',
+    'with_request_body',
+    'with_request_params',
+    'with_template'
+)
 
 
 def after_this_request(f):
@@ -26,10 +30,12 @@ def after_this_request(f):
     return f
 
 
-def templated(template=None, ext='html'):
-    """
-    Load and render a template with the result of the function.
-    Uses a formatted endpoint name as template name if none is provided.
+def with_template(template=None, ext='html', render_func=render_template):
+    """Render a template using the `dict` result of the function as context.
+
+    The function result is returned as is when not a `dict`.
+    If not template name is given, a formatted endpoint name is used by
+    replacing '.' with the path separator
 
     See: example_
 
@@ -47,16 +53,16 @@ def templated(template=None, ext='html'):
                 ctx = {}
             elif not isinstance(ctx, dict):
                 return ctx
-            return render_template(template_name, **ctx)
+            return render_func(template_name, **ctx)
 
         return wrapper
 
     return decorator
 
 
-def inject_request_params(f):
-    """
-    Inject request query parameters into the function as \**kwargs
+def with_request_params(f):
+    """Inject request query parameters into the function as \**kwargs
+
     :param f: function
     :return:
     """
@@ -73,9 +79,9 @@ def inject_request_params(f):
     return wrapper
 
 
-def inject_request_body(f):
-    """
-    Inject request body into the function as \**kwargs for methods POST, PUT, or PATCH.
+def with_request_body(f):
+    """Inject request body into the function as \**kwargs for methods POST, PUT, or PATCH.
+
     If the content-type is JSON, the body will be treated as JSON, otherwise as a form-data.
 
     :param f: function
@@ -83,21 +89,16 @@ def inject_request_body(f):
 
     @wraps(f)
     def wrapper(*args, **kwargs):
-        rx = _JSON_TYPE_RE.match(request.content_type)
-        data = None
-
         if request.method in ['POST', 'PUT', 'PATCH']:
             try:
-                if rx.group():
-                    data = json.loads(request.data)
-                    assert isinstance(data, dict)
-                else:
+                data = request.get_json()
+                if data is None:
                     data = dict(request.form.items())
+
+                if isinstance(data, dict):
+                    kwargs.update(data)
             except Exception as e:
                 print e
-
-            if isinstance(data, dict):
-                kwargs.update(data)
 
         return f(*args, **kwargs)
 
@@ -105,8 +106,7 @@ def inject_request_body(f):
 
 
 def ssl_required(f):
-    """
-    Force requests to be secured with SSL. Must set the `SSL` config parameter to `True`
+    """Force requests to be secured with SSL. Must set the `SSL` config parameter to `True`
 
     :param f: function
     """
@@ -126,12 +126,12 @@ def ssl_required(f):
 
 
 def as_json(f):
-    """
-    Serialize a response to JSON.
+    """Return result as a JSON response.
 
     Responses of type :class:`flask.wrappers.Response` are returned as is.
     Responses of type :class:`dict` are serialized to JSON.
-    All other response types are serialized to JSON and returned in an object with key `data` such as: {'data': True}
+    All other response types are serialized to JSON and returned
+    in an object with key `result` such as: {'result': True}
 
     :param f: function
     """
@@ -145,9 +145,9 @@ def as_json(f):
             return response
         if not callable(response):
             response = json_value(response)
-        if isinstance(dict, response):
+        if isinstance(response, dict):
             return jsonify(**response)
         else:
-            return jsonify(data=response)
+            return jsonify(result=response)
 
     return wrapper

@@ -8,7 +8,14 @@
 
 from werkzeug.utils import import_string, cached_property
 from flask.blueprints import Blueprint
-from .decorators import as_json, inject_request_body, templated
+from .decorators import as_json, with_request_body, with_template
+
+__all__ = (
+    'APIBlueprint',
+    'TemplateBlueprint',
+    'LazyView',
+    'make_router'
+)
 
 
 class LazyView(object):
@@ -24,17 +31,22 @@ class LazyView(object):
         return self.view(*args, **kwargs)
 
 
-def create_router(blueprint, module_name):
+def make_router(blueprint, import_prefix=None, filters=None):
     """
-    Create a router function that lazily load and dispatch routes.
+    Create a router function that lazily load and dispatch routes on the app or blueprint
+
+    ..code: python
+
+        # using filters `require_login`
+        route = make_router(app, require_login)
+        route('/load-data', 'myapp.dashboard.add_user', methods=['GET'])
 
     :param blueprint: the app or blueprint
-    :param module_name: the full module name to use for registered handlers
+    :param filters: middleware list in order that wrap the request handlers
     :return:
     """
-    names = []
 
-    def router(url_rule, func_name, **options):
+    def router(url_rule, func_name, endpoint=None, **options):
         """
         Register route urls and handlers
 
@@ -43,14 +55,18 @@ def create_router(blueprint, module_name):
         :param options: route options
         :return:
         """
-        view = LazyView(module_name + "." + func_name)
-        # generate endpoint to handle multiple import names
-        # this necessary to allow clean looking urls (no trailing slash)
-        names.append(func_name)
-        if func_name in names:
-            endpoint = func_name + "_" + str(names.count(func_name))
-        else:
-            endpoint = func_name
+        if import_prefix:
+            func_name = import_prefix + '.' + func_name
+
+        view = LazyView(func_name)
+
+        # wrap filters
+        if filters:
+            assert isinstance(filters, (tuple, list))
+            for f in filters:
+                view = f(view)
+
+        endpoint = endpoint or func_name.split('.')[-1]
         blueprint.add_url_rule(url_rule, endpoint, view_func=view, **options)
 
     return router
@@ -58,21 +74,21 @@ def create_router(blueprint, module_name):
 
 class APIBlueprint(Blueprint):
     """
-    Blueprint which inject request body into handler return responses as JSON.
+    Blueprint which inject request body into handler and return responses as JSON.
     """
 
     def add_url_rule(self, rule, endpoint=None, view_func=None, **options):
-        view_func = as_json(inject_request_body(view_func))
+        view_func = as_json(with_request_body(view_func))
         return super(APIBlueprint, self).add_url_rule(rule, endpoint, view_func, **options)
 
 
 class TemplateBlueprint(Blueprint):
-    """
-    Blueprint which loads and render templates with response data as context
+    """Blueprint which loads and render templates with response data as context
+
+    The template directory corresponds to the name of the blueprint in the `app.template_folder`
     """
 
     def add_url_rule(self, rule, endpoint=None, view_func=None, **options):
-        tpl_func = templated('/'.join([self.name, view_func.__name__]))
+        tpl_func = with_template('/'.join([self.name, view_func.__name__]))
         view_func = tpl_func(view_func)
-        # endpoint = options.pop("endpoint", view_func.__name__)
         return super(TemplateBlueprint, self).add_url_rule(rule, endpoint, view_func, **options)

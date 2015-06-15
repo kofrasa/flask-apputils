@@ -10,7 +10,6 @@ from flask.globals import current_app
 from flask import url_for, get_flashed_messages
 from jinja2.utils import Markup
 
-
 __all__ = [
     'get_flash',
     'get_logger',
@@ -29,8 +28,8 @@ __all__ = [
 def json_value(value):
     """Convert a object to a JSON primitive value
 
-    To support any arbitrary object, implement `to_json` or `to_dict`
-    method on the object t return a valid JSON primitive
+    To support any arbitrary object, implement `to_json` method on the object
+    which returns the desired JSON primitive value
 
     :param value: the value to convert to a JSON primitive
     """
@@ -42,27 +41,10 @@ def json_value(value):
         return {k: json_value(value[k]) for k in value}
     elif isinstance(value, (datetime, date, time)):
         return value.isoformat()
-    elif hasattr(value, 'to_dict') and callable(getattr(value, 'to_dict')):
-        return json_value(value.to_dict())
     elif hasattr(value, 'to_json') and callable(getattr(value, 'to_json')):
         return json_value(value.to_json())
     else:
         return str(value)
-
-
-def init_context_processor(app):
-    """Update the :class:`Flask` instance context processors
-
-    :param app: a Flask application instance
-    """
-    app.context_processor(lambda: {
-        'static_file': static_file,
-        'get_flask': get_flash,
-        'link_to': link_to,
-        'style_tag': style_tag,
-        'script_tag': script_tag,
-        'image_tag': image_tag,
-    })
 
 
 def static_file(filename):

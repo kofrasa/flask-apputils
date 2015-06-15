@@ -19,8 +19,6 @@ modules
 - `routing`
 - `middlewares`
 - `mimes`
-- `sessions.itdangerous_session`
-- `sessions.redis_session`
 - `validators`
 
 
@@ -34,7 +32,7 @@ from setuptools import setup
 
 setup(
     name='Flask-AppUtils',
-    version='0.1.3',
+    version='1.0.0',
     license='BSD',
     author='Francis Asante',
     author_email='kofrasa@gmail.com',
@@ -45,7 +43,7 @@ setup(
     include_package_data=True,
     zip_safe=True,
     platforms='any',
-    install_requires=['Flask>=0.8'],
+    install_requires=['Flask>=0.10.1'],
     test_suite='tests',
     classifiers=[
         'Development Status :: 4 - Beta',
