@@ -30,7 +30,7 @@ def after_this_request(f):
     return f
 
 
-def with_template(template=None, ext='html', render_func=render_template):
+def with_template(template=None, render_func=render_template):
     """Render a template using the `dict` result of the function as context.
 
     The function result is returned as is when not a `dict`.
@@ -47,7 +47,7 @@ def with_template(template=None, ext='html', render_func=render_template):
         def wrapper(*args, **kwargs):
             template_name = template
             if template_name is None:
-                template_name = request.endpoint.replace('.', '/') + '.' + ext
+                template_name = request.endpoint.replace('.', '/') + '.html'
             ctx = f(*args, **kwargs)
             if ctx is None:
                 ctx = {}

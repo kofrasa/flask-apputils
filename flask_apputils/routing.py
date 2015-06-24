@@ -89,6 +89,5 @@ class TemplateBlueprint(Blueprint):
     """
 
     def add_url_rule(self, rule, endpoint=None, view_func=None, **options):
-        tpl_func = with_template('/'.join([self.name, view_func.__name__]))
-        view_func = tpl_func(view_func)
+        view_func = with_template()(view_func)
         return super(TemplateBlueprint, self).add_url_rule(rule, endpoint, view_func, **options)
