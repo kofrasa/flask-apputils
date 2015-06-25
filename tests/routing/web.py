@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from flask_apputils.routing import make_router, TemplateBlueprint
+from flask_apputils.routing import get_router, TemplateBlueprint
 
 web = TemplateBlueprint('web', __name__)
-route = make_router(web, __name__)
+route = get_router(web, __name__)
 
 route('/', 'index')
 route('/home', 'home')

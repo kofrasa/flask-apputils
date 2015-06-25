@@ -14,7 +14,7 @@ __all__ = (
     'APIBlueprint',
     'TemplateBlueprint',
     'LazyView',
-    'make_router'
+    'get_router'
 )
 
 
@@ -31,9 +31,9 @@ class LazyView(object):
         return self.view(*args, **kwargs)
 
 
-def make_router(blueprint, import_prefix=None, filters=None):
+def get_router(blueprint, import_prefix=None, filters=None):
     """
-    Create a router function that lazily load and dispatch routes on the app or blueprint
+    Create a lazy router which loads handlers using import path
 
     ..code: python
 
@@ -64,7 +64,10 @@ def make_router(blueprint, import_prefix=None, filters=None):
         if filters:
             assert isinstance(filters, (tuple, list))
             for f in filters:
-                view = f(view)
+                if isinstance(f, basestring):
+                    f = import_string(f)
+                if callable(f):
+                    view = f(view)
 
         endpoint = endpoint or func_name.split('.')[-1]
         blueprint.add_url_rule(url_rule, endpoint, view_func=view, **options)

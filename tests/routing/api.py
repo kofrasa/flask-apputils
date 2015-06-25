@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from flask_apputils.routing import make_router, APIBlueprint
+from flask_apputils.routing import get_router, APIBlueprint
 
 web = APIBlueprint('api', __name__)
 
@@ -11,7 +11,7 @@ def log(f):
         return f(*args, **kwargs)
     return wrapper
 
-route = make_router(web, __name__, filters=[log])
+route = get_router(web, __name__, filters=[log])
 
 route('/user', 'user')
 route('/student', 'student')

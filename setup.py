@@ -32,7 +32,7 @@ from setuptools import setup
 
 setup(
     name='Flask-AppUtils',
-    version='1.0.1',
+    version='1.2.0',
     license='BSD',
     author='Francis Asante',
     author_email='kofrasa@gmail.com',
